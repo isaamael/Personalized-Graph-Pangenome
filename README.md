@@ -21,8 +21,6 @@ Workflows 04 and 05 use R entry points, shared functions under `scripts/lib/`, c
 
 Follow the input schemas and execution order in each pipeline guide. Commands use relative input and output paths. Run the shell workflows from the selected `scripts/` or `scripts_zh/` directory and the R workflows from their module directory, as shown in each guide.
 
-Assembly-specific depth cutoffs are supplied through the `TS_PURGE_*` and `MM_PURGE_*` variables. RTIGER reads its calibrated dataset-specific setting from `RTIGER_R`.
-
 The R workflows accept `--name=value` arguments. Use `--help` to list the options for an entry point, `--output` to select a result directory and `--save` to control output persistence. Dependencies and tested versions are recorded in each module's `environment.yaml`.
 
 ## Tests
