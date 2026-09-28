@@ -34,14 +34,14 @@ def overlap(a0, a1, b0, b1):
 
 
 def lift_interval(blocks, ref_chr, rs, re):
-    """PAF from minimap2 REF QRY: col1-3=ref, col6-8=qry."""
+    """Project reference target intervals to assembly query coordinates in PAF."""
     ref_chr = norm_chr(ref_chr)
     rs, re = int(rs), int(re)
     best = None
     for b in blocks:
-        if norm_chr(b["qname"]) != ref_chr:
+        if norm_chr(b["tname"]) != ref_chr:
             continue
-        ov = overlap(rs, re, b["qs"], b["qe"])
+        ov = overlap(rs, re, b["ts"], b["te"])
         if ov <= 0:
             continue
         if best is None or ov > best["ov"]:
@@ -50,20 +50,20 @@ def lift_interval(blocks, ref_chr, rs, re):
         return None
 
     b = best
-    span = b["qe"] - b["qs"]
+    span = b["te"] - b["ts"]
     if span <= 0:
         return None
-    frac0 = (max(rs, b["qs"]) - b["qs"]) / span
-    frac1 = (min(re, b["qe"]) - b["qs"]) / span
-    tspan = b["te"] - b["ts"]
-    q0 = int(b["ts"] + frac0 * tspan)
-    q1 = int(b["ts"] + frac1 * tspan)
+    frac0 = (max(rs, b["ts"]) - b["ts"]) / span
+    frac1 = (min(re, b["te"]) - b["ts"]) / span
+    qspan = b["qe"] - b["qs"]
+    q0 = int(b["qs"] + frac0 * qspan)
+    q1 = int(b["qs"] + frac1 * qspan)
     if b["strand"] == "-":
-        q0, q1 = b["te"] - int(frac1 * tspan), b["te"] - int(frac0 * tspan)
+        q0, q1 = b["qe"] - int(frac1 * qspan), b["qe"] - int(frac0 * qspan)
     if q0 > q1:
         q0, q1 = q1, q0
     return {
-        "qry_chr": norm_chr(b["tname"]),
+        "qry_chr": norm_chr(b["qname"]),
         "qry_start": q0,
         "qry_end": q1,
         "ref_chr": ref_chr,
