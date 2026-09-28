@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""PGGB–SyRI concordance — recommended final matching rules.
+"""PGGB–SyRI 一致性分析——推荐的最终匹配规则。
 
-Class          Size              Match
-SNP            1 bp SNV          exact CHROM,POS,REF,ALT (upper)
-Small indel    1–19 bp           exact REF/ALT at POS; OR same type, |dPOS|≤3,
-                                 len_sim≥0.7 (size need not be equal)
-Midsize indel  20–49 bp          same type, |dPOS|≤10, len_sim≥0.7
-Large INS/DEL  ≥50 bp            same type, |dPOS|≤200, len_sim≥0.7
-Complex        MNP/INV/DUP/…     excluded from P/R/F1
+类别           大小              匹配条件
+SNP            1 bp 单核苷酸变异  CHROM、POS、REF、ALT 完全一致（等位基因转为大写）
+小型插入缺失    1–19 bp           同一 POS 的 REF/ALT 完全一致；或类型相同、|dPOS|≤3，
+                                 且 len_sim≥0.7（长度不必相等）
+中型插入缺失    20–49 bp          类型相同、|dPOS|≤10、len_sim≥0.7
+大型插入/缺失   ≥50 bp            类型相同、|dPOS|≤200、len_sim≥0.7
+复杂变异       MNP/INV/DUP/…     不纳入精确率、召回率和 F1 的计算
 
-seq_sim not enforced (allele representation / left-norm mismatch).
+不强制要求 seq_sim 达标，因为等位基因的表示方式或左对齐规范化结果可能不一致。
 """
 from __future__ import annotations
 
@@ -43,22 +43,22 @@ def parse_info(info: str) -> dict:
 
 
 def indel_allele_seq(ref: str, alt: str, typ: str) -> str | None:
-    """Inserted or deleted sequence for seq_sim; None if unusable."""
+    """提取用于 seq_sim 的插入或缺失序列；无法使用时返回 None。"""
     if not ref or not alt or alt.startswith("<"):
         return None
     if any(c not in "ACGTNacgtn" for c in ref + alt):
         return None
     ref, alt = ref.upper(), alt.upper()
     if typ == "INS":
-        # left-anchored: REF shorter
+        # 左侧锚定：REF 较短
         if len(alt) <= len(ref):
             return None
-        # common: REF = anchor, ALT = anchor+ins
+        # 常见情况：REF = 锚定序列，ALT = 锚定序列 + 插入序列
         if alt.startswith(ref):
             return alt[len(ref):]
         if ref.startswith(alt):
             return None
-        return alt  # fallback raw
+        return alt  # 无法提取时返回原始序列
     if typ == "DEL":
         if len(ref) <= len(alt):
             return None
@@ -69,16 +69,16 @@ def indel_allele_seq(ref: str, alt: str, typ: str) -> str | None:
 
 
 def seq_sim(a: str | None, b: str | None) -> float | None:
-    """None = cannot evaluate (skip seq filter)."""
+    """None 表示无法评估，此时跳过序列筛选。"""
     if a is None or b is None or a == "" or b == "":
         return None
     if a == b:
         return 1.0
-    # simple identity / max-len (no alignment needed for short; for long use overlap ratio)
+    # 简单相同位点计数 / 最大长度（短序列无需比对；长序列使用重叠部分的匹配比例）
     la, lb = len(a), len(b)
     if la == 0 or lb == 0:
         return 0.0
-    # character identity on min prefix + length penalty via min/max already in len_sim
+    # 在较短序列覆盖的前缀内逐字符比较；len_sim 已通过最小长度/最大长度计入长度差异惩罚
     m = min(la, lb)
     match = sum(1 for i in range(m) if a[i] == b[i])
     return match / max(la, lb)
@@ -110,7 +110,7 @@ def classify_record(ref: str, alt: str, info: dict):
             cls = "Midsize"
         else:
             cls = "Large"
-        return cls, typ, svlen, None  # no usable seq
+        return cls, typ, svlen, None  # 无可用序列
 
     if any(c not in "ACGTNacgtn" for c in ref + alt):
         return None
@@ -119,7 +119,7 @@ def classify_record(ref: str, alt: str, info: dict):
     if lr == 1 and la == 1:
         return "SNP", "SNP", 1, None
     if lr == la:
-        return None  # MNP / complex
+        return None  # 多核苷酸多态性（MNP）/复杂变异
     sz = abs(lr - la)
     typ = "DEL" if lr > la else "INS"
     if sz <= 19:
@@ -227,13 +227,13 @@ def pair_ok(p, s, cls: str) -> bool:
         return False
     if len_sim(p["size"], s["size"]) < LEN_SIM_MIN[cls]:
         return False
-    # Allele-seq similarity optional: SyRI remapped vs PGGB often differ in
-    # left-normalization / representation → do NOT require seq_sim (user OK).
+    # 等位基因序列相似度为可选条件：重新映射后的 SyRI 与 PGGB 变异常在
+    # 左对齐规范化或表示方式上存在差异，因此不强制要求 seq_sim 达标。
     return True
 
 
 def match_small(P, S):
-    """Exact allele first; else same type + Δpos≤3 + len_sim≥0.7."""
+    """优先匹配完全一致的等位基因；否则要求类型相同、Δpos≤3 且 len_sim≥0.7。"""
     exact = {}
     for i, s in enumerate(S):
         exact.setdefault((s["pos"], s["ref"], s["alt"]), []).append(i)

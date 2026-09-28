@@ -1,30 +1,30 @@
 #!/usr/bin/env Rscript
-# Read one fitted RDS and export authoritative RTIGER, R/qtl and GS tables.
+# 读取一个拟合结果 RDS，导出以 RTIGER 结果为准的 RTIGER、R/qtl 和 GS 数据表。
 #
-# Sample names are taken from fit@info$expDesign$OName.
-# --verify-expdesign checks names only and does not change the mapping.
+# 样本名取自 fit@info$expDesign$OName。
+# --verify-expdesign 仅核对样本名，不改变映射关系。
 #
-# calcCOnumber() is compared only with raw transitions.
-# No minimum-support or spike-merging post-processing is applied.
+# calcCOnumber() 仅与原始状态转换次数进行比对。
+# 不执行最小支持度过滤或短片段合并等后处理。
 #
-# Outputs:
-#   A authoritative tables:
+# 输出文件：
+#   A 作为结果依据的原始数据表：
 #     raw_transitions.tsv
 #     raw_viterbi_segments.tsv
 #     co_per_sample_from_rds.tsv
 #     viterbi_sample_map.tsv
-#   B GT_compare（raw）:
-#     for_gt_compare/all_transitions.tsv       # pos=first_marker_after
-#     for_gt_compare/transition_intervals.tsv  # left/right/midpoint
-#   C R/qtl tables with adapted column names:
+#   B GT_compare（原始结果）：
+#     for_gt_compare/all_transitions.tsv       # 位置定义：pos=first_marker_after
+#     for_gt_compare/transition_intervals.tsv  # 区间位置：left/right/midpoint
+#   C 列名适配后的 R/qtl 数据表：
 #     for_rqtl/viterbi_segments.tsv
 #     for_rqtl/all_transitions.tsv
-#   D raw Viterbi matrix for GS:
+#   D 供 GS 使用的原始 Viterbi 矩阵：
 #     for_gs/viterbi_thin.tsv
 #     for_gs/viterbi_sample_map.tsv
 #   OUTPUTS.md / extract_meta.tsv
 #
-# Optional: --skip-viterbi-matrix
+# 可选参数：--skip-viterbi-matrix
 
 suppressPackageStartupMessages({
   library(GenomicRanges)
@@ -118,7 +118,7 @@ append_df <- function(df, path) {
   write.table(df, path, sep = "\t", quote = FALSE, row.names = FALSE, col.names = FALSE, append = TRUE)
 }
 
-# --- load RDS once ---
+# --- 一次性载入 RDS ---
 fit <- readRDS(rds_path)
 ed <- fit@info$expDesign
 if (is.null(ed) || is.null(ed$OName)) {
@@ -242,7 +242,7 @@ for (i in seq_len(n)) {
       rs <- do.call(rbind, raw_s)
       append_df(rs, raw_seg_path)
       n_raw_segs <- n_raw_segs + nrow(rs)
-      # R/qtl uses the same segments with start/end column names.
+      # R/qtl 使用相同片段，起止位置列名改为 start/end。
       append_df(
         data.frame(
           sample = rs$sample, chr = rs$chr,
@@ -273,7 +273,7 @@ for (i in seq_len(n)) {
       )
       append_df(gt_pos, gt_pos_path)
       append_df(gt_iv, gt_iv_path)
-      # R/qtl transitions use the same positions.
+      # R/qtl 状态转换表使用相同的位置。
       append_df(gt_pos, rqtl_tr_path)
     }
   }, error = function(e) {
@@ -323,7 +323,7 @@ write.table(co_df, co_path, sep = "\t", quote = FALSE, row.names = FALSE)
 
 n_markers_thin <- 0L
 if (!skip_matrix) {
-  # Sort by chromosome and numeric position.
+  # 按染色体及位置数值排序。
   mid_vec <- marker_set
   chr_part <- sub(":.*$", "", mid_vec)
   pos_part <- suppressWarnings(as.numeric(sub("^.*:", "", mid_vec)))

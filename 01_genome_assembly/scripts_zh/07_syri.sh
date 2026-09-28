@@ -1,5 +1,4 @@
 #!/bin/bash
-# Align chromosome-scale assemblies with minimap2 and identify structural and sequence differences with SyRI.
 # 对三组染色体级基因组进行全基因组比对，并使用 SyRI 鉴定结构变异和序列变异。
 
 # asm20 用于组装间比对；--eqx、-c、--cs 保留 CIGAR 和碱基层差异信息。

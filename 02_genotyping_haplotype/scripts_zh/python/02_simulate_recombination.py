@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Simulate F2 recombination and export parental-origin fragments in MM coordinates."""
+"""模拟 F2 重组，并按 MM 坐标导出亲本来源片段。"""
 
 from __future__ import annotations
 

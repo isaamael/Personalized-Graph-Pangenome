@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Project reference centromere intervals to assembly coords via minimap2 PAF."""
+"""通过 minimap2 的 PAF 比对结果，将参考基因组的着丝粒区间投影到组装坐标。"""
 import argparse
 from pathlib import Path
 
@@ -34,7 +34,7 @@ def overlap(a0, a1, b0, b1):
 
 
 def lift_interval(blocks, ref_chr, rs, re):
-    """PAF from minimap2 REF QRY: col1-3=ref, col6-8=qry."""
+    """minimap2 REF QRY 生成的 PAF：第 1–3 列为参考序列，第 6–8 列为查询序列。"""
     ref_chr = norm_chr(ref_chr)
     rs, re = int(rs), int(re)
     best = None

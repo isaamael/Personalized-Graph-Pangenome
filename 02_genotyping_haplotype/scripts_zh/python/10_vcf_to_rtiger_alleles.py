@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Convert VCF allele depths to RTIGER counts: REF to MM and ALT to TS."""
+"""将 VCF 等位基因测序深度转换为 RTIGER 计数：REF 对应 MM，ALT 对应 TS。"""
 from __future__ import annotations
 
 import argparse

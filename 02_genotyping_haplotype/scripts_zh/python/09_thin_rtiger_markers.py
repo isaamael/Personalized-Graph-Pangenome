@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Thin a VCF by genomic bins while preserving complete FORMAT and sample columns."""
+"""按基因组窗口稀疏化 VCF，同时完整保留 FORMAT 列和样本列。"""
 from __future__ import annotations
 
 import argparse
@@ -234,7 +234,7 @@ def select_sites(
     need_gq = method in GQ_METHODS or bin_pctl > 0
     vcf = VCF(inp)
     has_gq = vcf_has_gq(vcf.raw_header)
-    # Keep the selected allele when multiple records share one position.
+    # 同一位置存在多条记录时，保留选定的等位基因。
     selected: set[tuple[str, int, str, str]] = set()
     n_in = 0
     n_snp = n_indel = n_sv = n_fallback = n_skip_empty = 0
@@ -341,7 +341,7 @@ def write_thinned_vcf(inp: str, out: str, selected: set[tuple[str, int, str, str
                 pos = int(cols[1])
             except ValueError:
                 continue
-            # Match REF and ALT exactly to avoid duplicate records at one position.
+            # 精确匹配 REF 和 ALT，避免同一位置出现重复记录。
             if (cols[0], pos, cols[3], cols[4]) in selected:
                 if not line.endswith("\n"):
                     line += "\n"

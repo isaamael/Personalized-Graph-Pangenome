@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""Stratified PGGB–SyRI concordance: A=genomewide (existing), B=1-1 collinear, C=B∩non-repetitive.
+"""PGGB–SyRI 分层一致性分析：A=全基因组（已有），B=一对一共线区域，C=B∩非重复区域。
 
-B mask (MM coords):
-  include SYN (query) ∪ SYNAL (query)
-  exclude INV*/TRANS*/DUP*/HDR/NOTAL (query)
-  exclude chromosome ends (END_MARGIN_BP)
-  exclude coord-failure proxy: remapped ShV with ORIG_TS chrom != MM chrom
+B 掩码（MM 坐标）：
+  纳入 SYN（查询序列）∪ SYNAL（查询序列）
+  排除 INV*/TRANS*/DUP*/HDR/NOTAL（查询序列）
+  排除染色体末端区域（END_MARGIN_BP）
+  排除提示坐标转换失败的变异：重新映射的 ShV 中 ORIG_TS 染色体与 MM 染色体不一致的记录
 
-C = B minus:
-  TE (EDTA TEanno)
-  tandem (SyRI TDM + EDTA tandem/simple if present)
-  satellite / centromere (MM_centromeres_final.bed)
-  segmental duplication (SyRI DUP*/INVDP* on MM)
-  assembly gap ± GAP_FLANK_BP
+C = 从 B 中扣除以下区域：
+  转座元件（TE，EDTA TEanno）
+  串联重复（SyRI TDM，以及 EDTA 的串联重复/简单重复注释，如有）
+  卫星重复 / 着丝粒（MM_centromeres_final.bed）
+  片段重复（MM 上的 SyRI DUP*/INVDP*）
+  组装缺口及两侧各 GAP_FLANK_BP 的区域
 """
 from __future__ import annotations
 
@@ -36,7 +36,7 @@ EXCLUDE_STRUCT = {
     "HDR", "NOTAL",
 }
 DUP_SD = {"DUP", "DUPAL", "INVDP", "INVDPAL", "CPG", "CPL"}
-TE_SKIP_TYPES = {"target_site_duplication"}  # tiny TSD footprints; keep as TE-adjacent via parent TE
+TE_SKIP_TYPES = {"target_site_duplication"}  # 短小的靶位点重复（TSD）区域，通过所属转座元件作为邻接区域保留
 
 
 def run(cmd, check=True):
@@ -54,7 +54,7 @@ def load_fai(path: Path) -> dict[str, int]:
 
 
 def syri_mm_intervals(syri_out: Path, types: set[str]) -> list[tuple[str, int, int, str]]:
-    """Return 0-based half-open MM (query) intervals for given SyRI types."""
+    """返回指定 SyRI 类型在 MM（查询序列）上的区间，采用从 0 开始的左闭右开坐标。"""
     rows = []
     with open(syri_out) as fh:
         for line in fh:
@@ -74,7 +74,7 @@ def syri_mm_intervals(syri_out: Path, types: set[str]) -> list[tuple[str, int, i
             s, e = int(qs), int(qe)
             if e < s:
                 s, e = e, s
-            # SyRI coords 1-based inclusive → BED 0-based half-open
+            # SyRI 从 1 开始的闭区间坐标 → BED 从 0 开始的左闭右开坐标
             rows.append((qc, s - 1, e, typ))
     return rows
 
@@ -166,7 +166,7 @@ def edta_te_beds(gff: Path, te_bed: Path, tandem_bed: Path):
             if tandem_re.search(typ) or tandem_re.search(attrs):
                 tandem_rows.append(bed)
             else:
-                # all other EDTA features as TE/repeat
+                # 将其他所有 EDTA 注释归为转座元件/重复序列
                 te_rows.append(bed)
     write_bed(te_bed, te_rows, merge=True)
     write_bed(tandem_bed, tandem_rows, merge=True)
@@ -183,7 +183,7 @@ def build_masks(beddir: Path, lens: dict[str, int]):
     excl = syri_mm_intervals(SYRI_OUT, EXCLUDE_STRUCT)
     write_bed(beddir / "exclude_struct.mm.bed", excl, merge=True)
 
-    # chromosome ends
+    # 染色体末端区域
     ends = []
     for c, L in lens.items():
         if c not in CHRS:
@@ -193,13 +193,13 @@ def build_masks(beddir: Path, lens: dict[str, int]):
             ends.append((c, max(0, L - END_MARGIN_BP), L, "tel3"))
     write_bed(beddir / "chr_ends.bed", ends, merge=True)
 
-    # B = syn − struct − ends
+    # B = 共线区域 − 结构变异区域 − 染色体末端区域
     run(["bash", "-lc",
          f"bedtools subtract -a {beddir/'syn_synal.mm.bed'} -b {beddir/'exclude_struct.mm.bed'} "
          f"| bedtools subtract -a - -b {beddir/'chr_ends.bed'} "
          f"| bedtools sort -i - | bedtools merge -i - > {beddir/'mask_B.bed'}"])
 
-    # C extras
+    # C 层需额外排除的区域
     build_gap_bed(MM_FA, beddir / "MM_gaps_ge10.bed", GAP_MIN_N)
     run(["bash", "-lc",
          f"bedtools slop -i {beddir/'MM_gaps_ge10.bed'} -g {MM_FAI} -b {GAP_FLANK_BP} "
@@ -213,11 +213,11 @@ def build_masks(beddir: Path, lens: dict[str, int]):
     sd = syri_mm_intervals(SYRI_OUT, DUP_SD)
     write_bed(beddir / "segdup.syri.bed", sd, merge=True)
 
-    # centromere / satellite proxy
+    # 以着丝粒区间代表着丝粒/卫星重复区域
     run(["bash", "-lc",
          f"sort -k1,1 -k2,2n {CEN_BED} | bedtools merge -i - > {beddir/'centromere.bed'}"])
 
-    # union of C excludes
+    # 合并 C 层需排除的所有区域
     run(["bash", "-lc",
          f"cat {beddir/'te.edta.bed'} {beddir/'tandem_sat_like.edta.bed'} "
          f"{beddir/'tdm.syri.bed'} {beddir/'centromere.bed'} "

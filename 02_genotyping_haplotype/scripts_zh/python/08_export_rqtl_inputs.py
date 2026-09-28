@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Export Viterbi ancestry segments in GS and R/qtl-compatible formats.
+"""将 Viterbi 推断的亲本来源片段导出为兼容 GS 和 R/qtl 的格式。
 
-States 0, 1 and 2 represent homozygous MM, heterozygous and homozygous TS.
-One marker per genomic bin is selected by KC and distance to the bin centre.
+状态 0、1 和 2 分别表示 MM 纯合、杂合和 TS 纯合。
+根据 KC 值及到窗口中心的距离，在每个基因组窗口中选择一个标记。
 """
 from __future__ import annotations
 
@@ -67,16 +67,16 @@ def mean_kc_from_fields(fields: List[str]) -> float:
 def select_gs_markers(
     bcftools: str, vcf: str, bin_bp: int
 ) -> Tuple[List[str], Dict[str, List[int]], List[Tuple[str, int, int, float, int]]]:
-    """50kb-bin thin: max meanKC, then nearest bin center.
+    """按 50 kb 窗口稀疏化：优先选择平均 KC 最高的位点，其次选择距窗口中心最近的位点。
 
-    Returns labels, by_chr_pos, site_rows(chrom,pos,bin,mean_kc,dist_center).
-    bin_bp<=0 → keep all sites (KC still parsed for stats file).
+    返回 labels、by_chr_pos 和 site_rows(chrom,pos,bin,mean_kc,dist_center)。
+    bin_bp<=0 时保留所有位点，仍解析 KC 值以写入统计文件。
     """
     cmd = [bcftools, "query", "-f", "%CHROM\t%POS[\t%KC]\n", vcf]
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, text=True, bufsize=1 << 20)
     assert proc.stdout is not None
 
-    # best per (chrom, bin): (-kc, dist, pos, mean_kc)
+    # 每个 (chrom, bin) 的最优候选按 (-kc, dist, pos, mean_kc) 比较
     best: Dict[Tuple[str, int], Tuple[float, int, int, float]] = {}
     n_in = 0
 
@@ -84,18 +84,18 @@ def select_gs_markers(
         nonlocal n_in
         n_in += 1
         if bin_bp <= 0:
-            bid = pos  # unique
+            bid = pos  # 使用位点坐标作为唯一标识
             center = pos
         else:
             bid = (pos - 1) // bin_bp
             center = bid * bin_bp + (bin_bp + 1) // 2
         dist = abs(pos - center)
         key = (chrom, bid)
-        # sort key for winner: higher kc, then smaller dist, then smaller pos
+        # 候选排序优先级：kc 较大，其次 dist 较小，最后 pos 较小
         score = (-kc, dist, pos, kc)
         cur = best.get(key)
         if cur is None or score < (-cur[0], cur[1], cur[2], cur[3]):
-            # store as (kc, dist, pos, kc) with positive kc for later
+            # 按 (kc, dist, pos, kc) 保存，保留未取负的 kc 值供后续使用
             best[key] = (kc, dist, pos, kc)
 
     for line in proc.stdout:
@@ -198,7 +198,7 @@ def load_seqlengths(fai: str) -> List[Tuple[str, int]]:
 def paint_sample(
     segs: List[dict], by_chr_pos: Dict[str, List[int]], n_markers: int, chrom_order: List[str]
 ) -> bytearray:
-    """Paint GS markers; CO gaps split at midpoint (RTIGER-consistent, no false NA)."""
+    """为 GS 标记赋予亲本来源状态；在交换（CO）间隙的中点划分状态，与 RTIGER 保持一致，避免误标为 NA。"""
     out = bytearray(n_markers)
     offset = 0
     chrom_off: Dict[str, int] = {}
@@ -227,14 +227,14 @@ def paint_sample(
                 out[off + i] = ST_CODE[sl[j]["state"]]
                 continue
             if j == 0:
-                # before first segment → extend first state
+                # 位于首个片段之前时，延伸首个片段的状态
                 out[off + i] = ST_CODE[sl[0]["state"]]
                 continue
             if j >= nsl:
-                # after last segment → extend last state
+                # 位于末个片段之后时，延伸末个片段的状态
                 out[off + i] = ST_CODE[sl[-1]["state"]]
                 continue
-            # gap between sl[j-1] and sl[j]
+            # 处理 sl[j-1] 与 sl[j] 之间的空隙
             left = sl[j - 1]
             right = sl[j]
             mid = (left["end"] + right["start"]) // 2
@@ -272,7 +272,7 @@ def write_state_matrix(
 
 
 def promote_legacy_thin_to_dense(gs_dir: str) -> Optional[str]:
-    """If legacy full-matrix viterbi_thin exists and dense missing, rename → dense."""
+    """若旧版完整矩阵 viterbi_thin 存在且 dense 缺失，则将其重命名为 dense。"""
     thin = os.path.join(gs_dir, "viterbi_thin.tsv")
     dense = os.path.join(gs_dir, "viterbi_dense.tsv")
     if not os.path.isfile(thin) or os.path.getsize(thin) == 0:
@@ -281,7 +281,7 @@ def promote_legacy_thin_to_dense(gs_dir: str) -> Optional[str]:
         return dense
     with open(thin) as f:
         ncols = len(f.readline().rstrip("\n").split("\t")) - 1
-    # full parentStable ~5e5; 50kb thin ~1e4
+    # 完整 parentStable 约含 5e5 个标记；按 50 kb 窗口稀疏化后约为 1e4 个
     if ncols < 100000:
         return None
     os.rename(thin, dense)
@@ -319,7 +319,7 @@ def main() -> int:
     )
     args = ap.parse_args()
     if not args.write_dense:
-        args.reuse_dense = True  # default: keep existing dense / rename
+        args.reuse_dense = True  # 默认保留已有 dense 矩阵，或通过重命名旧版矩阵获得
 
     eval_dir = os.path.abspath(args.eval_dir)
     out_dir = os.path.abspath(args.out_dir or os.path.join(eval_dir, "export_gs_rqtl"))
@@ -396,7 +396,7 @@ def main() -> int:
     thin_path = os.path.join(gs_dir, "viterbi_thin.tsv")
     dense_path = os.path.join(gs_dir, "viterbi_dense.tsv")
     sites_path = os.path.join(gs_dir, "gs_thin_sites.tsv")
-    # GS-specific parent-stable markers are kept separate from the full marker set.
+    # GS 专用的亲本稳定差异标记与完整标记集分开保存。
     ps50_path = os.path.join(gs_dir, "parent_stable_sites_50kb.tsv")
     thin_wrote = False
     n_markers = 0
@@ -419,7 +419,7 @@ def main() -> int:
                 fp.write(
                     f"{chrom}\t{pos}\t{bid}\t{kc:.6f}\t{dist}\tparentStable_gs50kb\n"
                 )
-        # Export a two-column marker list for downstream tools.
+        # 导出两列标记列表，供下游工具使用。
         ancestry_dir = os.path.dirname(os.path.dirname(eval_dir))
         shared_dir = os.path.join(ancestry_dir, "shared")
         if os.path.isdir(shared_dir):

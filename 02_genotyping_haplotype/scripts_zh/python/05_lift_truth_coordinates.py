@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lift MM-coordinate truth sets and marker panels to SL6 with a PAF alignment."""
+"""利用 PAF 比对将 MM 坐标下的真值集和标记面板转换至 SL6 坐标。"""
 import argparse
 import csv
 import gzip

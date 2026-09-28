@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build simF1/simF2 haplotype-block truth sets and marker projections."""
+"""构建 simF1/simF2 单倍型区块真值集和标记投影结果。"""
 
 from __future__ import annotations
 

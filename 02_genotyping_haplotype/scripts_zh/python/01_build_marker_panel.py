@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build SyRI SNP markers, structural-variant blocks and the genetic map."""
+"""构建 SyRI SNP 标记、结构变异区块及遗传图谱。"""
 
 from __future__ import annotations
 

@@ -7,7 +7,7 @@ art_illumina -ss HS25 -l 150 -p -f 5 -m 500 -s 50 -rs 1042 -i simulated_haplotyp
 cat simF2_001.A1.fq simF2_001.B1.fq | pigz > simF2_001.R1.fastq.gz
 cat simF2_001.A2.fq simF2_001.B2.fq | pigz > simF2_001.R2.fastq.gz
 
-# 分别随机抽取两个亲本等量reads后合并，构建伪F1数据。
+# 分别随机抽取两个亲本的等量读段后合并，构建伪 F1 数据。
 seqkit sample -p 0.5 -s 42 parent_MM.R1.fastq.gz -o parent_MM.subset.R1.fastq.gz
 seqkit sample -p 0.5 -s 42 parent_TS.R1.fastq.gz -o parent_TS.subset.R1.fastq.gz
 seqkit sample -p 0.5 -s 42 parent_MM.R2.fastq.gz -o parent_MM.subset.R2.fastq.gz

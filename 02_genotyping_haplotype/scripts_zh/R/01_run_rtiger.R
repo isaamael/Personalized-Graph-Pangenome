@@ -1,21 +1,21 @@
 #!/usr/bin/env Rscript
-# RTIGER single-R / R-grid / autotune crossover caller.
+# RTIGER 交换事件检测：支持单个 R、R 网格扫描和自动调参。
 #
-# Modes (mutually exclusive):
-#   1) Single R:  positional R>0, --scan-R FALSE, --autotune FALSE
-#   2) R-grid:    positional R=0, --scan-R TRUE
-#   3) Autotune:  positional R=initial_R, --autotune TRUE, --scan-R FALSE
+# 运行模式（互斥）：
+#   1) 单个 R：位置参数 R>0，--scan-R FALSE，--autotune FALSE
+#   2) R 网格扫描：位置参数 R=0，--scan-R TRUE
+#   3) 自动调参：位置参数 R=initial_R，--autotune TRUE，--scan-R FALSE
 #
-# Usage:
-#   Single R with subsampling:
+# 用法：
+#   单个 R，使用子抽样：
 #     Rscript step02_run_rtiger.R NAME TAG R NSTATES EXP_DESIGN SEQLENGTHS RUN_OUT QC_OUT \
 #       --scan-R FALSE --single-scan-n N --post-processing 1
 #
-#   R-grid scan:
+#   R 网格扫描：
 #     Rscript step02_run_rtiger.R NAME TAG 0 NSTATES EXP_DESIGN SEQLENGTHS RUN_OUT QC_OUT \
 #       --scan-R TRUE --scan-n N --post-processing 1
 #
-#   Autotune (initial R + subsampling):
+#   自动调参（指定初始 R，并使用子抽样）：
 #     Rscript step02_run_rtiger.R NAME TAG 20 NSTATES EXP_DESIGN SEQLENGTHS RUN_OUT QC_OUT \
 #       --autotune TRUE --single-scan-n N --post-processing 1
 

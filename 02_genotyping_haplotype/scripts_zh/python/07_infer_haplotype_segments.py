@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Infer ancestry segments by KC filtering, Viterbi decoding and smoothing."""
+"""通过 KC 过滤、Viterbi 解码和平滑处理推断亲本来源片段。"""
 from __future__ import annotations
 
 import argparse
@@ -149,7 +149,7 @@ def main() -> int:
         return 1
 
     cmd = [args.bcftools, "query", "-f", "%CHROM\t%POS[\t%GT\t%KC]\n", args.vcf]
-    # pass1: per-sample KC pX among called GT only
+    # 第一遍扫描：仅根据已判定的基因型 GT，计算各样本 KC 的第 X 百分位数
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, text=True, bufsize=1 << 20)
     assert proc.stdout is not None
     kc_by: Dict[str, List[float]] = {s: [] for s in samples}
@@ -180,7 +180,7 @@ def main() -> int:
     for s in samples:
         vals = kc_by[s]
         if not vals:
-            thr_by[s] = float("inf")  # no called KC → keep nothing
+            thr_by[s] = float("inf")  # 已判定基因型无可用 KC 值时，不保留任何位点
             continue
         thr_by[s] = float(np.percentile(vals, args.kc_percentile))
         n_with += 1
@@ -207,7 +207,7 @@ def main() -> int:
         flush=True,
     )
 
-    # pass2: keep called GT with KC > sample thr
+    # 第二遍扫描：保留 KC 高于对应样本阈值的已判定基因型 GT
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, text=True, bufsize=1 << 20)
     assert proc.stdout is not None
     data: Dict[str, List[Tuple[str, int, int]]] = {s: [] for s in samples}

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reconstruct haplotype FASTA sequences from parental-coordinate fragments."""
+"""根据亲本坐标片段重建单倍型 FASTA 序列。"""
 
 from __future__ import annotations
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Select collinear SyRI SNPs represented as fixed parental differences in the panel."""
+"""筛选在标记面板中表现为亲本间固定差异的共线区 SyRI SNP。"""
 from __future__ import annotations
 
 import argparse
@@ -12,7 +12,7 @@ from typing import Dict, List, Set, Tuple
 
 
 def load_collinear(bed: str) -> Dict[str, Tuple[List[int], List[int]]]:
-    """0-based half-open → per chrom (starts, ends), sorted by start."""
+    """将以 0 为起点的左闭右开区间按染色体整理为 (starts, ends)，并按起点排序。"""
     raw: Dict[str, List[Tuple[int, int]]] = {}
     with open(bed) as fh:
         for line in fh:
@@ -56,7 +56,7 @@ def main() -> int:
     col = load_collinear(args.collinear_bed)
     n_iv = sum(len(v[0]) for v in col.values())
 
-    # SyRI: ref_allele=TS(cols3), alt_allele=MM(cols4) → panel REF=MM, ALT=TS
+    # SyRI 中 ref_allele=TS（第 3 列）、alt_allele=MM（第 4 列）；标记面板中 REF=MM、ALT=TS
     print("[step06] load SyRI SNP (full ~1.62M, not thin) …", flush=True)
     syri_keys: Dict[Tuple[str, int, str, str], str] = {}
     n_syri = n_syri_col = 0
@@ -112,7 +112,7 @@ def main() -> int:
             gt_mm = gt_tok(f[9 + i_mm])
             gt_ts = gt_tok(f[9 + i_ts])
             if gt_mm.replace("/", "|") not in ("0|0",) or gt_ts.replace("/", "|") not in ("1|1",):
-                # also accept 0/0 1/1
+                # 同时接受未定相基因型 0/0 和 1/1
                 if gt_mm.replace("|", "/") != "0/0" or gt_ts.replace("|", "/") != "1/1":
                     continue
             n_diag += 1
