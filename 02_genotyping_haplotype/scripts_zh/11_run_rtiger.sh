@@ -6,4 +6,4 @@ python python/10_vcf_to_rtiger_alleles.py --vcf cohort.rtiger.thinned.vcf.gz --d
 (echo -e 'chrom\tlength'; cut -f1,2 SL6_reference.fasta.fai) > rtiger.seqlengths.tsv
 
 # Fit the RTIGER model and infer chromosome-scale ancestry states.
-Rscript R/01_run_rtiger.R cohort default R_value 3 rtiger.expDesign.tsv rtiger.seqlengths.tsv rtiger_run rtiger_output --scan-R FALSE --single-scan-n 100 --min-support 1 --post-processing TRUE --fai SL6_reference.fasta.fai
+Rscript R/01_run_rtiger.R cohort default "${RTIGER_R}" 3 rtiger.expDesign.tsv rtiger.seqlengths.tsv rtiger_run rtiger_output --scan-R FALSE --single-scan-n 100 --min-support 1 --post-processing TRUE --fai SL6_reference.fasta.fai

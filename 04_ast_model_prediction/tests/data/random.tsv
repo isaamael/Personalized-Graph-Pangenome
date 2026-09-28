@@ -1,0 +1,4 @@
+scope	chr	z_SNP_within_chr
+all	chr01	-0.01
+all	chr02	0.0
+all	chr03	0.01

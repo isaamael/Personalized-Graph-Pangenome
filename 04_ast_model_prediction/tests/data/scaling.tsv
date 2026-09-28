@@ -1,0 +1,10 @@
+context_id	term	centre	scale	within_chr_centres
+final_refit	z_HDB	0	0.1	
+final_refit	z_SNP_within_chr	0	0.1	chr01:0.0594141747684796;chr02:0.07468192495363378;chr03:0.089720068015255935
+final_refit	z_TE_Gypsy	0	0.1	
+final_refit	z_TE_Copia	0	0.1	
+final_refit	z_TE_CACTA	0	0.1	
+final_refit	z_TE_Helitron	0	0.1	
+final_refit	z_TE_Mutator	0	0.1	
+final_refit	z_TE_PIF_Harbinger	0	0.1	
+final_refit	z_TE_hAT	0	0.1	

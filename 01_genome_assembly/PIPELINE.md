@@ -25,7 +25,7 @@ This workflow assembles two tomato genomes (TS and MM) from PacBio HiFi reads, c
 
 - Organelle-matching reads are removed when the alignment has at least 70% identity and covers at least 50% of the read.
 - hifiasm is run with `-l0`, leaving duplicate removal to the explicit downstream `purge_dups` step.
-- `purge_dups` uses HiFi read-depth and assembly self-alignment evidence. The low, middle and high depth cutoffs remain represented by `dp` placeholders pending recovery and final verification of the run-specific values.
+- `purge_dups` uses HiFi read-depth and assembly self-alignment evidence. Assembly-specific depth cutoffs are supplied through `TS_PURGE_LOW`, `TS_PURGE_MID`, `TS_PURGE_HIGH`, `MM_PURGE_LOW`, `MM_PURGE_MID` and `MM_PURGE_HIGH`.
 
 ### Chromosome scaffolding and assessment
 
@@ -47,15 +47,6 @@ This workflow assembles two tomato genomes (TS and MM) from PacBio HiFi reads, c
 - EDTA annotations from both assemblies are merged and clustered at 80% identity and 80% shorter-sequence coverage to form a pan-TE library.
 - Liftoff transfers TS-623 and SL6 annotations to TS and MM, respectively. A sorted MM-to-SL6 PAF supports coordinate conversion in the genotyping workflow.
 
-## Inputs not distributed here
+## Inputs and execution
 
-PacBio HiFi reads, organelle references, TS-623 and SL6 reference assemblies/annotations, BUSCO datasets and centromere annotations must be obtained separately. Large intermediate and result files are intentionally excluded from Git.
-
-## Items still being completed
-
-- recovery and confirmation of the final `purge_dups` depth cutoffs;
-- exact software versions and environment definitions;
-- public accession links and checksums for all primary inputs;
-- a small example dataset and executable smoke test.
-
-The scripts preserve the analysis backbone but are not intended to run without adapting input filenames and local resources.
+Prepare PacBio HiFi reads, organelle references, TS-623 and SL6 reference assemblies and annotations, BUSCO datasets and centromere annotations at the relative paths used by the numbered scripts. Export the assembly-specific depth variables before running step 04. Run the scripts from the selected `scripts/` or `scripts_zh/` directory in numerical order, with the required tools available on `PATH`.

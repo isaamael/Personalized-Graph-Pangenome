@@ -1,0 +1,52 @@
+name: ASTmodel-and-Fn-prediction
+format: dependency-and-runtime-specification
+model_source: HTR-model-2.2.0_20260905
+public_model_name: ASTmodel
+language: R
+tested_environment:
+  R: '4.3.1'
+  platform: Windows x86_64
+  packages:
+    glmmTMB: '1.1.9'
+    lme4: '1.1.35.3'
+    TMB: '1.9.11'
+    Matrix: '1.6.5'
+    AlphaSimR: '2.1.0'
+    digest: '0.6.33'
+    yaml: '2.3.8'
+  optional_packages:
+    qs: '0.27.3'
+requirements:
+  feature_preparation: [base, stats, utils]
+  ast_fitting: [glmmTMB, lme4, TMB, Matrix, splines]
+  transmission: [AlphaSimR, digest]
+  environment_check: [yaml]
+runtime:
+  alphasimr_threads: 1
+  parallel_runs: disjoint_MC_ranges_in_separate_processes
+  recommended_max_processes: 4
+  command_syntax: '--name=value'
+  checkpoint_format: RDS
+  cache_without_qs: RDS
+  table_format: TSV_or_TSV.GZ
+frozen_defaults:
+  selection_CI: 0.90
+  reporting_CI: [0.90, 0.95]
+  delta_AIC_minimum: 2
+  joint_BH_q_maximum: 0.05
+  inner_folds: 4
+  outer_folds: 5
+  outer_repeats: 10
+  paired_bootstrap_replicates: 3000
+  fitting_seed: 20260830
+  simulation_seed: 20260901
+  gamma_shape_v: 4
+  noninterfering_fraction_p: 0
+  map_scale: 1
+  sdb_transport_fraction: 1
+  response_window_bp: 500000
+  phased_cell_bp: 50000
+installation:
+  repository: 'https://cloud.r-project.org'
+  method: standard_R_package_installation
+  version_policy: 'Recorded R and package versions support reproducible numerical comparisons; install them with standard R package tools.'

@@ -41,16 +41,8 @@ This workflow simulates F1/F2 material, compares linear-reference and graph-base
 - The retained calls are filtered by per-sample KC, decoded by Viterbi and smoothed with a 100-kb minimum interior-segment rule.
 - RTIGER input is generated from VCF allele depths after 50-kb marker thinning. REF depth represents MM and ALT depth represents TS.
 
-## Scope of the repository
+## Inputs and execution
 
-The repository includes core simulation, calling, state inference and result-conversion code. Accuracy/concordance calculations, parameter-grid evaluations, QC summaries, plotting scripts and temporary analysis utilities are intentionally omitted from the manuscript code release.
+Prepare the parental assemblies, diagnostic variants, sample manifests and reference resources at the relative paths used by the numbered scripts. Run the scripts from the selected `scripts/` or `scripts_zh/` directory in numerical order, with the required tools available on `PATH`.
 
-## Items still being completed
-
-- final software versions and environment lock files;
-- the complete depth grid and example sample manifests;
-- confirmation of the final RTIGER recombination-rate setting represented as `R_value` in the concise shell script;
-- minimal test inputs and expected-output checksums;
-- final public data accession links.
-
-The numbered shell files are concise methodological skeletons; local paths, cohort manifests and compute settings must be supplied before execution.
+Step 11 reads the calibrated RTIGER parameter from the exported `RTIGER_R` variable. Set it to the selected value for the dataset being processed.

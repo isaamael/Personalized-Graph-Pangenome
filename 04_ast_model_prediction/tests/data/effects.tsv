@@ -1,0 +1,11 @@
+scope	term	estimate
+all	z_HDB	-0.3
+all	comparable_defined	0.03
+all	z_SNP_within_chr	0.2
+all	z_TE_Gypsy	-0.06
+all	z_TE_Copia	-0.04
+all	z_TE_CACTA	-0.02
+all	z_TE_Helitron	0.0
+all	z_TE_Mutator	0.02
+all	z_TE_PIF_Harbinger	0.04
+all	z_TE_hAT	0.06

@@ -1,0 +1,44 @@
+name: BreedSpace
+format: dependency-and-runtime-specification
+language: R
+tested_environment:
+  R: '4.3.1'
+  platform: Windows x86_64
+  packages:
+    Matrix: '1.6.4'
+    Rcpp: '1.0.11'
+    highs: '1.9.0.1'
+    digest: '0.6.33'
+    yaml: '2.3.8'
+  optional_packages:
+    qs: '0.27.3'
+    data.table: '1.15.4'
+  build_tools: Rtools43-compatible C++11 compiler and GNU make
+  OpenMP: used by the metric-distance kernel
+runtime:
+  command_syntax: '--name=value'
+  default_threads: 1
+  table_format: TSV or TSV.GZ
+  object_format: RDS
+  optional_object_input: QS, requires qs
+  genotype_storage: sparse dosage differences, windows by individuals
+  scoring_definition: better_parent_GEBV_ratio_v1
+  attainment: minimum of each raw trait GEBV divided by its better-parent GEBV
+  parent_best: intercept plus absolute sum of frozen window effects, positive for both traits
+  target_comparison: raw trait GEBV >= p times its better-parent GEBV
+  certificate_model_hash: required, includes the parent-ratio scoring definition
+  idealGT_switch_bins: [[15, 20], [21, 40], [41, 60], [61, 80]]
+  minimum_switches: 15, recorded and checked with the certificate
+  idealGT_search: 5 percent then 1 percent ancestry difference; 180 seconds per solve; finite candidate library
+  complete_cohort_summary: expected-size-column validates each full cohort; saved_subset identifies retained subsets
+  missing_genotypes: complete 0/1/2 dosage calls required
+  save_false: compute and return in memory with persistent results and checkpoints disabled
+  inputs: existing genotypes and frozen additive effects
+  outputs: numerical tables, coordinates and RDS objects
+  compiler_required_for: MDS and genotype similarity only
+  package_installation: user-managed R library
+version_policy:
+  - This file records the reference runtime and dependency versions.
+  - Use one consistent R library; --r-library optionally prepends a user-supplied library.
+  - Install the required packages and build tools before running the workflow.
+  - Run tests/smoke.R after changing R, Matrix, Rcpp or highs.
