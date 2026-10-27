@@ -7,7 +7,6 @@ tested_environment:
     Rcpp: '1.0.11'
     highs: '1.9.0.1'
     digest: '0.6.33'
-    yaml: '2.3.8'
   optional_packages:
     qs: '0.27.3'
   build_tools: C++11 compiler and GNU make for MDS and similarity

@@ -6,7 +6,6 @@ The scripts fit AST models from graph-pangenome features and observed ancestry t
 
 | Script | Main operation |
 |---|---|
-| `00_check_environment.R` | Inspect installed R packages against the environment specification |
 | `00_prepare_features.R` | Combine background features with parental cell statistics |
 | `01_prepare_inputs.R` | Validate window features and AST responses and prepare model inputs |
 | `02_fit_background.R` | Fit chromosome-position background models |

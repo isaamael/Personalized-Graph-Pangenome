@@ -6,7 +6,6 @@ The scripts combine additive effects and parental-ancestry genotypes to search f
 
 | Script | Main operation |
 |---|---|
-| `00_check_environment.R` | Check R packages and the optional compiled runtime |
 | `01_prepare_inputs.R` | Validate tables and prepare scoring and genotype objects |
 | `02_search_idealGT.R` | Search homozygous targets within trait and ancestry-switch ranges |
 | `04_score_progeny.R` | Calculate additive scores, joint attainment and U |

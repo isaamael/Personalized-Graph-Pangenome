@@ -13,7 +13,6 @@ tested_environment:
     Matrix: '1.6.5'
     AlphaSimR: '2.1.0'
     digest: '0.6.33'
-    yaml: '2.3.8'
   optional_packages:
     qs: '0.27.3'
 external_fitting_tested_environment:
@@ -27,7 +26,6 @@ requirements:
   ast_fitting: [glmmTMB, lme4, TMB, Matrix, splines]
   transmission: [AlphaSimR, digest]
   external_fitting: [glmmTMB, lme4, TMB, Matrix, splines]
-  environment_check: [yaml]
 runtime:
   alphasimr_threads: 1
   parallel_runs: disjoint_MC_ranges_in_separate_processes
