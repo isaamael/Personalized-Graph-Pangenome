@@ -8,20 +8,25 @@ main <- function() {
   if(nzchar(o[['r-library']])) .libPaths(c(o[['r-library']],.libPaths()))
   if(!requireNamespace('yaml',quietly=TRUE)) stop('Install yaml')
   spec <- yaml::read_yaml(o$environment)
+  tested_spec <- spec$tested_environment
+  if(o$stage=='external_fitting') {
+    external <- spec$external_fitting_tested_environment
+    tested_spec <- list(R=external$R,packages=external[setdiff(names(external),'R')])
+  }
   available <- names(spec$requirements)
   if(!o$stage %in% c('all',available)) stop('Unknown stage: ',o$stage)
   packages <- unique(unlist(spec$requirements[if(o$stage=='all') available else o$stage]))
   rows <- lapply(packages,function(p) {
     present <- requireNamespace(p,quietly=TRUE)
     actual <- if(present) as.character(packageVersion(p)) else NA_character_
-    tested <- spec$tested_environment$packages[[p]]
+    tested <- tested_spec$packages[[p]]
     data.frame(package=p,installed=present,version=actual,tested_version=if(is.null(tested)) NA_character_ else tested,
       version_match=if(is.null(tested)) NA else identical(actual,tested))
   })
   status <- do.call(rbind,rows)
   print(status,row.names=FALSE)
   if(!all(status$installed)) stop('Required packages are missing')
-  if(o$strict && (!identical(as.character(getRversion()),spec$tested_environment$R) ||
+  if(o$strict && (!identical(as.character(getRversion()),tested_spec$R) ||
     any(!status$version_match,na.rm=TRUE))) stop('Installed versions differ from the tested environment')
   if(o$save) { ast_required(o,'output');ast_write(status,o$output) }
   cat('ENVIRONMENT_OK\n')

@@ -9,7 +9,6 @@ SNP            1 bp 单核苷酸变异  CHROM、POS、REF、ALT 完全一致（�
 大型插入/缺失   ≥50 bp            类型相同、|dPOS|≤200、len_sim≥0.7
 复杂变异       MNP/INV/DUP/…     不纳入精确率、召回率和 F1 的计算
 
-不强制要求 seq_sim 达标，因为等位基因的表示方式或左对齐规范化结果可能不一致。
 """
 from __future__ import annotations
 
@@ -26,7 +25,6 @@ CHRS = [f"chr{i}" for i in range(1, 13)]
 CLASSES = ["SNP", "Small", "Midsize", "Large"]
 POS_TOL = {"SNP": 0, "Small": 3, "Midsize": 10, "Large": 200}
 LEN_SIM_MIN = {"Small": 0.7, "Midsize": 0.7, "Large": 0.7}
-SEQ_SIM_MIN = {"Small": 0.7, "Midsize": 0.7, "Large": 0.7}
 
 
 def open_vcf(path: Path):
@@ -40,48 +38,6 @@ def parse_info(info: str) -> dict:
             k, v = x.split("=", 1)
             d[k] = v
     return d
-
-
-def indel_allele_seq(ref: str, alt: str, typ: str) -> str | None:
-    """提取用于 seq_sim 的插入或缺失序列；无法使用时返回 None。"""
-    if not ref or not alt or alt.startswith("<"):
-        return None
-    if any(c not in "ACGTNacgtn" for c in ref + alt):
-        return None
-    ref, alt = ref.upper(), alt.upper()
-    if typ == "INS":
-        # 左侧锚定：REF 较短
-        if len(alt) <= len(ref):
-            return None
-        # 常见情况：REF = 锚定序列，ALT = 锚定序列 + 插入序列
-        if alt.startswith(ref):
-            return alt[len(ref):]
-        if ref.startswith(alt):
-            return None
-        return alt  # 无法提取时返回原始序列
-    if typ == "DEL":
-        if len(ref) <= len(alt):
-            return None
-        if ref.startswith(alt):
-            return ref[len(alt):]
-        return ref
-    return None
-
-
-def seq_sim(a: str | None, b: str | None) -> float | None:
-    """None 表示无法评估，此时跳过序列筛选。"""
-    if a is None or b is None or a == "" or b == "":
-        return None
-    if a == b:
-        return 1.0
-    # 简单相同位点计数 / 最大长度（短序列无需比对；长序列使用重叠部分的匹配比例）
-    la, lb = len(a), len(b)
-    if la == 0 or lb == 0:
-        return 0.0
-    # 在较短序列覆盖的前缀内逐字符比较；len_sim 已通过最小长度/最大长度计入长度差异惩罚
-    m = min(la, lb)
-    match = sum(1 for i in range(m) if a[i] == b[i])
-    return match / max(la, lb)
 
 
 def len_sim(a: int, b: int) -> float:
@@ -110,14 +66,14 @@ def classify_record(ref: str, alt: str, info: dict):
             cls = "Midsize"
         else:
             cls = "Large"
-        return cls, typ, svlen, None  # 无可用序列
+        return cls, typ, svlen
 
     if any(c not in "ACGTNacgtn" for c in ref + alt):
         return None
     ref_u, alt_u = ref.upper(), alt.upper()
     lr, la = len(ref_u), len(alt_u)
     if lr == 1 and la == 1:
-        return "SNP", "SNP", 1, None
+        return "SNP", "SNP", 1
     if lr == la:
         return None  # 多核苷酸多态性（MNP）/复杂变异
     sz = abs(lr - la)
@@ -128,8 +84,7 @@ def classify_record(ref: str, alt: str, info: dict):
         cls = "Midsize"
     else:
         cls = "Large"
-    seq = indel_allele_seq(ref_u, alt_u, typ)
-    return cls, typ, sz, seq
+    return cls, typ, sz
 
 
 def load_bed(bed: Path | None):
@@ -191,11 +146,11 @@ def load_variants(paths, mask, require_samechr_orig: bool):
                 if hit is None:
                     n_cx += 1
                     continue
-                cls, typ, sz, seq = hit
+                cls, typ, sz = hit
                 data[chrom][cls].append({
                     "pos": pos, "size": sz, "type": typ,
                     "ref": ref.upper(), "alt": alt.upper(),
-                    "seq": seq, "matched": False,
+                    "matched": False,
                 })
                 n_keep += 1
     for c in CHRS:
@@ -227,8 +182,7 @@ def pair_ok(p, s, cls: str) -> bool:
         return False
     if len_sim(p["size"], s["size"]) < LEN_SIM_MIN[cls]:
         return False
-    # 等位基因序列相似度为可选条件：重新映射后的 SyRI 与 PGGB 变异常在
-    # 左对齐规范化或表示方式上存在差异，因此不强制要求 seq_sim 达标。
+    # 按类型、位置和长度相似度匹配等价的变异表示。
     return True
 
 

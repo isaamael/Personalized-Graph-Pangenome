@@ -351,7 +351,7 @@ if (!skip_matrix) {
 
 meta <- data.frame(
   key = c(
-    "rds", "sample_map_source", "spike_filter",
+    "rds", "sample_map_source", "export_method",
     "n_samples", "n_raw_transitions", "n_raw_segments",
     "wrote_viterbi_thin", "n_markers_thin",
     "gt_pos_rule", "coordinate_note"
@@ -359,7 +359,7 @@ meta <- data.frame(
   value = c(
     normalizePath(rds_path),
     "fit@info$expDesign$OName",
-    "NONE (no merge_spikes; Rqtl historical min-support=3 removed)",
+    "fitted_viterbi_states",
     as.character(n),
     as.character(n_raw_trans),
     as.character(n_raw_segs),
@@ -374,7 +374,7 @@ write.table(meta, file.path(outdir, "extract_meta.tsv"),
             sep = "\t", quote = FALSE, row.names = FALSE)
 
 outs_md <- c(
-  "# step06 outputs (auto)",
+  "# RTIGER ancestry outputs",
   "",
   "## A. RTIGER authority (raw; official CO count)",
   sprintf("- `raw_transitions.tsv` — %d rows; ≡ calcCOnumber", n_raw_trans),
@@ -386,10 +386,9 @@ outs_md <- c(
   "- `for_gt_compare/all_transitions.tsv` — pos=first_marker_after",
   "- `for_gt_compare/transition_intervals.tsv` — left/right/midpoint",
   "",
-  "## C. Rqtl (raw; column rename only — NO min-support filter)",
+  "## C. R/qtl segment and transition tables",
   "- `for_rqtl/viterbi_segments.tsv` — start/end (= raw segments)",
   "- `for_rqtl/all_transitions.tsv` — same rows as GT pos table",
-  "- NOTE: old Rqtl step01 defaulted --min-support 3 (merge_spikes); that is NOT applied here",
   "",
   "## D. GS (raw Viterbi matrix)",
   if (skip_matrix) {
@@ -403,7 +402,7 @@ outs_md <- c(
   "## Rules",
   "- One readRDS; sample map from fit@info$expDesign$OName only",
   "- calcCOnumber ↔ raw_transitions only",
-  "- Pre-step06 filtering is only RTIGER rigidity(R) + post.processing at fit time — not merge_spikes"
+  "- Ancestry states are taken from the fitted RTIGER object"
 )
 writeLines(outs_md, file.path(outdir, "OUTPUTS.md"))
 

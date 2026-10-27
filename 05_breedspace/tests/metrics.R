@@ -1,8 +1,8 @@
 bs_test_metrics <- function() {
   grid <- data.frame(window_id=paste0('w',1:4),chr=c(1,1,2,2),physical_bp=c(1,2,1,2),cell_bp_weight=1)
   s <- bs_parent_ratio_scoring(list(grid=grid,beta=cbind(a=c(.5,-.3,.2,-.1),b=c(-.2,.5,-.1,.3)),
-    intercept=c(a=2,b=3),mu=c(a=20,b=30),advantage=c(a=10,b=10)))
-  stopifnot(all(s$mu==0),max(abs(s$parent_best-c(2.3,3.5)))<1e-12,
+    intercept=c(a=0,b=0),mu=c(a=20,b=30),advantage=c(a=10,b=10)))
+  stopifnot(all(s$mu==0),max(abs(s$parent_best-c(.3,.5)))<1e-12,
     identical(s$parent_best,s$advantage))
   G <- as.matrix(expand.grid(rep(list(0:2),4)))
   scored <- bs_score(G,s)

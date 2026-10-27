@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 main <- function() {
   script <- normalizePath(sub('^--file=','',grep('^--file=',commandArgs(FALSE),value=TRUE)))
-  root <- dirname(dirname(script)); package <- file.path(root,'scripts')
+  root <- dirname(dirname(script)); package <- file.path(root,if(dir.exists(file.path(root,'scripts'))) 'scripts' else 'submission')
   for(f in c('cli.R','map.R','dynamic.R','transport.R','simulation.R')) source(file.path(package,'lib',f))
   o <- ast_options(list('r-library'='',keep=FALSE,output=''))
   if(is.null(o)) return(invisible(NULL))
@@ -27,7 +27,7 @@ main <- function() {
   cfg$chromosome_levels <- unique(bundle$reference$chr)
   f <- input[[1L]];f$chr <- factor(f$chr,levels=cfg$chromosome_levels)
   f$arm_size_class <- factor(f$arm_size_class,levels=c('Short','Long'))
-  pp <- htr_prepare_features(cfg,f,f$window_id,'review')
+  pp <- htr_prepare_features(cfg,f,f$window_id,'input_check')
   stopifnot(nrow(pp$features)==nrow(f),length(cfg$components)==12L)
   formula <- htr_formula(cfg,c('meiotic_ACR','TE7','SDB_SNP','HDB'))
   cat('MODEL_SCHEMA_AND_TRANSFORMS_OK\n')

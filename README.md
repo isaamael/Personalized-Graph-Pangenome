@@ -1,35 +1,34 @@
 # Personalized Graph Pangenome
 
-Code accompanying a tomato personalized graph-pangenome study, covering genome assembly, graph construction, genotyping, ancestry inference, AST modelling and breeding-space analysis.
+Code accompanying a tomato personalized graph-pangenome study: genome assembly, genotyping, ancestry inference, genomic selection, AST modelling and breeding-space analysis.
 
 ## Workflows
 
 | Directory | Workflow | Documentation |
 |---|---|---|
-| `01_genome_assembly` | HiFi assembly, chromosome scaffolding, genome comparison, graph construction and annotation | [Pipeline](01_genome_assembly/PIPELINE.md) |
-| `02_genotyping_haplotype` | F2 simulation, variant calling, ancestry and recombination inference | [Pipeline](02_genotyping_haplotype/PIPELINE.md) |
-| `04_ast_model_prediction` | AST model fitting, validation and AlphaSimR-based F2/Fn prediction | [Pipeline](04_ast_model_prediction/PIPELINE.md) |
-| `05_breedspace` | idealGT search, progeny scoring, genotype-space analysis and cohort summaries | [Pipeline](05_breedspace/PIPELINE.md) |
+| `01_genome_assembly` | HiFi assembly, scaffolding, genome comparison, graph construction and annotation | [Guide](01_genome_assembly/PIPELINE.md) |
+| `02_genotyping_haplotype` | F2 simulation, variant calling and ancestry inference | [Guide](02_genotyping_haplotype/PIPELINE.md) |
+| `03_genomic_selection` | Marker dosages, genomic prediction and additive-effect export | [Guide](03_genomic_selection/PIPELINE.md) |
+| `04_ast_model_prediction` | AST fitting, external-cohort fitting and multigeneration simulation | [Guide](04_ast_model_prediction/PIPELINE.md) |
+| `05_breedspace` | idealGT search, progeny scoring and genotype-space analysis | [Guide](05_breedspace/PIPELINE.md) |
 
-## Repository structure
+## Requirements and use
 
-Each workflow provides a `PIPELINE.md` and numbered entry points under `scripts/`. Workflows 01 and 02 also provide `scripts_zh/` with Chinese annotations for the same commands. Their Python and R utilities are located alongside the entry points.
+[SOFTWARE.md](SOFTWARE.md) lists the core software and versions. Modules 03–05 also provide `environment.yaml` files with their R dependencies.
 
-Workflows 04 and 05 use R entry points, shared functions under `scripts/lib/`, computational components under `scripts/engine/`, an `environment.yaml` dependency specification and small synthetic inputs under `tests/data/`.
+Follow each guide's input schemas and numbered entry points under `scripts/`. Run the shell workflows from their `scripts/` directory and the R workflows from their module directory. Input and output paths in the examples are relative to those directories. R entry points in modules 03–05 accept `--name=value` arguments and provide `--help`.
 
-## Running the workflows
-
-Follow the input schemas and execution order in each pipeline guide. Commands use relative input and output paths. Run the shell workflows from the selected `scripts/` or `scripts_zh/` directory and the R workflows from their module directory, as shown in each guide.
-
-The R workflows accept `--name=value` arguments. Use `--help` to list the options for an entry point, `--output` to select a result directory and `--save` to control output persistence. Dependencies and tested versions are recorded in each module's `environment.yaml`.
+Workflow 03 exports grid-level additive effects for workflow 05. Workflow 04 accepts prepared genomic features and AST responses and exports a model for ancestry simulation.
 
 ## Tests
 
-Run the smoke tests from the repository root after preparing the R dependencies:
+Small test cases are provided under each module's `tests/` directory. For example, from the repository root:
 
 ```sh
+python 01_genome_assembly/tests/test_project_centromeres.py
+python 03_genomic_selection/tests/test_prepare_genotypes.py
+Rscript 03_genomic_selection/tests/smoke.R
 Rscript 04_ast_model_prediction/tests/smoke.R
+Rscript 04_ast_model_prediction/tests/external.R
 Rscript 05_breedspace/tests/smoke.R
 ```
-
-The tests exercise input validation, model transformations, simulation and checkpoint recovery, optimization, scoring, genotype distances and command-line integration using synthetic data. BreedSpace's MDS tests use a C++ toolchain compatible with the installed R version.

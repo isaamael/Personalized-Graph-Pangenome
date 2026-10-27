@@ -21,10 +21,12 @@ bs_match_grid <- function(a,b) {
 }
 bs_weights <- function(grid) grid$cell_bp_weight/sum(grid$cell_bp_weight)
 bs_parent_ratio_scoring <- function(s) {
+  if (!is.null(s$intercept) && any(!is.finite(s$intercept) | s$intercept != 0)) stop('Pure additive scoring requires zero intercept')
+  s$intercept <- setNames(rep(0,2L),colnames(s$beta))
   s$mu <- setNames(rep(0,2L),colnames(s$beta))
   s$parent_best <- setNames(as.numeric(s$intercept)+abs(colSums(s$beta)),colnames(s$beta))
   s$advantage <- s$parent_best
-  s$definition <- 'better_parent_GEBV_ratio_v1'
+  s$definition <- 'pure_additive_parent_ratio_v1'
   bs_validate_scoring(s)
   s
 }
@@ -37,9 +39,10 @@ bs_validate_scoring <- function(s) {
     if(length(s[[k]])!=2 || any(!is.finite(s[[k]]))) stop('Invalid scoring field: ',k)
     if(!is.null(names(s[[k]])) && !identical(names(s[[k]]),colnames(s$beta))) stop('Trait order differs: ',k)
   }
+  if(any(s$intercept!=0)) stop('Pure additive scoring requires zero intercept')
   if(any(s$parent_best<=0)) stop('Both better-parent GEBVs must be positive')
   expected <- as.numeric(s$intercept)+abs(colSums(s$beta))
-  if(!identical(s$definition,'better_parent_GEBV_ratio_v1') || any(s$mu!=0) ||
+  if(!identical(s$definition,'pure_additive_parent_ratio_v1') || any(s$mu!=0) ||
      any(s$advantage!=s$parent_best) || max(abs(s$parent_best-expected))>1e-10)
     stop('Use bs_parent_ratio_scoring() to prepare the better-parent GEBV ratio model')
   invisible(TRUE)

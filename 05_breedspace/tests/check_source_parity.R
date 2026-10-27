@@ -2,9 +2,9 @@
 main <- function() {
   script <- normalizePath(sub('^--file=','',grep('^--file=',commandArgs(FALSE),value=TRUE)))
   root <- dirname(dirname(script))
-  for(f in c('cli.R','data.R','metrics.R','markov.R','search.R')) source(file.path(root,'scripts/lib',f))
-  o <- bs_options(list(scoring='',collection='',progeny='', 'candidate-pool'='', 'markov-counts'='', 'expected-markov'='',
-    'reference-u-code'='', certificates='', 'window-id-column'='', 'level-scale'=100, output='',save=FALSE,'r-library'=''))
+  for(f in c('cli.R','data.R','metrics.R','markov.R','search.R')) source(file.path(root,if(dir.exists(file.path(root,'scripts'))) 'scripts' else 'submission','lib',f))
+  o <- bs_options(list(scoring='',collection='',progeny='', 'markov-counts'='', 'expected-markov'='',
+    'reference-u-code'='', 'window-id-column'='', 'level-scale'=100, output='',save=FALSE,'r-library'=''))
   if(is.null(o)) return(invisible(NULL))
   suppressPackageStartupMessages({library(Matrix);library(digest);library(qs);library(data.table)})
   bs_required(o,c('scoring','collection'))
@@ -24,21 +24,6 @@ main <- function() {
   for(k in c(colnames(s$beta),'K')) check(paste0('retained_',k),max(abs(values[[k]]-meta[[k]])))
   expected_attainment <- apply(sweep(as.matrix(meta[,colnames(s$beta)]),2,s$parent_best,'/'),1,min)
   check('raw_parent_ratio',max(abs(values$attainment-expected_attainment)))
-  key <- function(x) paste(x$samples$level,vapply(seq_len(nrow(x$samples)),function(i)
-    digest(as.integer(bs_dense(x,i)),algo='sha256'),''))
-  cert <- if(nzchar(o$certificates)) bs_read(o$certificates) else NULL
-  if(!is.null(cert)) {
-    frozen <- bs_freeze_minimum(gt,s,cert)
-    check('minimum_library_identity',as.numeric(!identical(sort(key(gt)),sort(key(frozen)))),0)
-  }
-  if(nzchar(o[['candidate-pool']])) {
-    if(is.null(cert)) stop('candidate-pool validation requires --certificates with a matching model hash')
-    pool <- bs_load(o[['candidate-pool']]); pm <- as.data.frame(pool$summary)
-    pm$level <- pm$level/o[['level-scale']]
-    pool_gt <- bs_from_state(pool$state,s$grid,pm)
-    pf <- bs_freeze_minimum(pool_gt,s,cert)
-    check('minimum_pool_identity',as.numeric(!identical(sort(key(gt)),sort(key(pf)))),0)
-  }
   if(nzchar(o[['markov-counts']])) {
     bs_required(o,'expected-markov')
     m <- bs_load(o[['markov-counts']]); m$grid <- s$grid

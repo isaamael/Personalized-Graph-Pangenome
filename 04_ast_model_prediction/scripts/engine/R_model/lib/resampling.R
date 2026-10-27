@@ -12,7 +12,7 @@ htr_digest_seed <- function(config, namespace, ...) {
 
 htr_stable_seed <- function(config, ...) {
   scheme <- config$resampling$fold_seed_scheme
-  if (identical(scheme, "legacy_weighted_utf8_v1_frozen_no_observed_collisions")) {
+  if (identical(scheme, "weighted_utf8_v1")) {
     key <- paste(..., collapse = "|")
     code <- utf8ToInt(key)
     offset <- sum(code * seq_along(code)) %% 1000000L

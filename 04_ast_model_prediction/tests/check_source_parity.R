@@ -2,7 +2,8 @@
 main <- function() {
   script <- normalizePath(sub('^--file=','',grep('^--file=',commandArgs(FALSE),value=TRUE)))
   root <- dirname(dirname(script))
-  source(file.path(root,'scripts/lib/cli.R'))
+  package <- file.path(root,if(dir.exists(file.path(root,'scripts'))) 'scripts' else 'submission')
+  source(file.path(package,'lib/cli.R'))
   o <- ast_options(list('model-source'='','transport-source'=''))
   if(is.null(o)) return(invisible(NULL))
   ast_required(o,c('model-source','transport-source'))
@@ -21,11 +22,11 @@ main <- function() {
     cat(basename(copy),':',length(names),'unchanged function bodies\n')
   }
   for(name in c('model_core.R','resampling.R','selection.R')) {
-    compare(file.path(o[['model-source']],'R_model/lib',name),file.path(root,'scripts/engine/R_model/lib',name),
+    compare(file.path(o[['model-source']],'R_model/lib',name),file.path(package,'engine/R_model/lib',name),
       if(name=='model_core.R') 'htr_load_model_data' else character())
   }
-  compare(file.path(o[['model-source']],'generation/lib/htr_transport.R'),file.path(root,'scripts/lib/map.R'))
-  compare(o[['transport-source']],file.path(root,'scripts/lib/dynamic.R'))
+  compare(file.path(o[['model-source']],'generation/lib/htr_transport.R'),file.path(package,'lib/map.R'))
+  compare(o[['transport-source']],file.path(package,'lib/dynamic.R'))
   cat('SOURCE_PARITY_OK\n')
 }
 main()

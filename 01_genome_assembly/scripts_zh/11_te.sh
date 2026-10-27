@@ -18,3 +18,7 @@ RepeatMasker -pa 32 -engine rmblast -lib results/te/pan_library/tomato_pan.TElib
 # 根据参考到组装的 PAF，将已发表的参考着丝粒区间投影到 TS 和 MM 坐标。
 python python/04_project_centromeres.py --cen-pos reference/centromere_positions.tsv --species SLC --accession TS-623 --paf results/syri/TS623_vs_TS/TS623_vs_TS.paf --sample TS --outdir results/te/centromere
 python python/04_project_centromeres.py --cen-pos reference/centromere_positions.tsv --species SLL --accession 'Heinz 1706' --paf results/syri/SL6_vs_MM/SL6_vs_MM.paf --sample MM --outdir results/te/centromere
+
+# 汇总每个组装的 EDTA 原生注释统计。
+Rscript R/01_summarize_te.R TS results/te/TS/TS.chr1-12.fasta.mod.EDTA.TEanno.sum results/te/composition/TS
+Rscript R/01_summarize_te.R MM results/te/MM/MM.chr1-12.fasta.mod.EDTA.TEanno.sum results/te/composition/MM

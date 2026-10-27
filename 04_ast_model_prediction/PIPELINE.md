@@ -6,25 +6,13 @@ All entry points are R scripts. Run the commands below from this directory. Path
 
 ## 1. Prepare the runtime
 
-Use the R and package versions recorded in [environment.yaml](environment.yaml) for reproducible numerical comparisons. It is a dependency and runtime specification. The recorded environment uses R 4.3.1, glmmTMB 1.1.9, lme4 1.1.35.3, TMB 1.9.11, Matrix 1.6.5, AlphaSimR 2.1.0, digest 0.6.33, and yaml 2.3.8. Optional qs 0.27.3 supports model caching; RDS is the cache format when qs is unavailable.
-
-| Operation | Dependencies |
-| --- | --- |
-| Feature and input preparation | R base, stats, and utils |
-| AST fitting and validation | glmmTMB, lme4, TMB, Matrix, and splines |
-| Phased transmission and output verification | AlphaSimR and digest |
-| Environment check | yaml |
-
-After installing the required packages, check their availability and versions:
+Core versions are listed in [SOFTWARE.md](../SOFTWARE.md), with supporting dependencies in [environment.yaml](environment.yaml). Inspect the installed R packages with:
 
 ```bash
 Rscript scripts/00_check_environment.R --environment=environment.yaml
-Rscript scripts/00_check_environment.R --environment=environment.yaml --strict=true
 ```
 
-The first command reports installed versions. The strict check also requires the recorded R version and required package versions. Use `--stage=transmission` or another key under `requirements` to check a particular stage. The environment checker, model fitting scripts, simulation, summary, and smoke test accept `--r-library=path/to/R-library` for an additional library directory.
-
-`scripts/engine/` contains the statistical implementation; `scripts/lib/` contains CLI handling, feature updates, model transport, and AlphaSimR transmission. Synthetic inputs and the executable smoke test are in `tests/`.
+`--r-library=path/to/R-library` selects an additional R library. The statistical implementation is under `scripts/engine/`; command handling and simulation functions are under `scripts/lib/`.
 
 ## 2. Prepare window features and responses
 
@@ -98,17 +86,9 @@ Rscript scripts/05b_chromosome_loco.R --input=data/prepared --output=run/ast
 
 The background model uses a beta-binomial likelihood with a logit link for window-level counts of positive and negative responses. Fixed effects comprise a natural spline of normalized chromosome-arm position and arm-size class. Chromosome intercepts and position slopes are random effects. The SDB component includes a comparability indicator, chromosome-centered SNP divergence, and a chromosome-specific SNP random slope.
 
-Selection combines an AIC improvement threshold, a joint Benjamini–Hochberg q-value threshold across the `all` and `nonPER` scopes, and a positive lower confidence bound for paired OOF Bernoulli log-score gain. Defaults are `--aic-min=2`, `--q-max=0.05`, `--ci=0.90`, `--bootstrap=3000`, `--inner-folds=4`, `--outer-folds=5`, `--repeats=10`, and `--seed=20260830`. Both 90% and 95% intervals are reported. Final fitted window predictions and OOF validation predictions have distinct prediction roles in the outputs.
+Selection combines AIC improvement, a Benjamini–Hochberg q-value threshold across the `all` and `nonPER` scopes, and a positive lower confidence bound for paired OOF log-score gain. Component selection is repeated within the training portion of each outer fold. See `--help` for analysis settings.
 
-Use consistent settings across stages and a new output directory when changing the analysis configuration. `--cache=true` enables fit caching, and `--work=run/work` selects a work directory. Individual outer folds can be run separately:
-
-```bash
-Rscript scripts/04_run_nested_cv.R --input=data/prepared --output=run/ast --repeat-id=1 --outer-fold=1
-```
-
-A selector value of `0` requests all repeats or folds. Component selection is repeated within the training portion of each outer fold. Run 04b after all requested folds are complete.
-
-For input and feature-transformation checks, use `--dry-run=true`. Stage 03 also accepts `--mode=metadata` for configuration inspection and `--mode=smoke` or `--mode=smoke_core` for reduced fitting runs. Full modelling uses the default `--mode=run`.
+Use the same settings across stages and a fresh output directory for each analysis configuration. Run stage 04b after the requested cross-validation folds finish.
 
 ## 4. Prepare the fitted model for transmission
 
@@ -124,7 +104,7 @@ With final model tables available, start at this stage. The transport interface 
 | `--cells` | The aligned 50-kb parental statistics |
 | `--contract` | One row with `schema_version=HTR-model-2.2.0` and `selected_components=M0+meiotic_ACR+TE7+SDB_SNP+HDB` |
 
-The stage 05 exports supply the model tables. The transport check requires unique, aligned windows, positive scales, chromosome SNP centers and effects, and reference probabilities strictly between 0 and 0.75. Reconstructed F1 features must match the supplied reference features within `1e-7`; the transported F1 probabilities must match within `1e-12`.
+Stage 05 exports the model tables. Transport checks aligned windows, feature scaling and reconstruction of the supplied F1 probabilities.
 
 ```bash
 Rscript scripts/06_prepare_transport.R \
@@ -138,7 +118,7 @@ Rscript scripts/06_prepare_transport.R \
   --output=run/transport.rds
 ```
 
-The resulting `transport.rds` bundles the reference predictions, selected model parameters, parental statistics, marker grid, and F1 consistency checks.
+The resulting `transport.rds` contains the reference predictions, model parameters, parental statistics and marker grid.
 
 ## 5. Simulate F2 and propagate to Fn
 
@@ -152,19 +132,9 @@ Before each transmission, the two phased parental paths update HDB, SDB, and TE 
 
 The updated features modify the reference logit prediction using the fitted coefficients, scales, and chromosome SNP effects. The resulting probability `p_AST` maps to a gamete switch probability `q = 1 - sqrt(1 - p_AST)`, with map increments in Morgans of `-0.5 * log(1 - 2q)`. The implementation requires `q < 0.5`. Each window increment is distributed over its 50-kb cells by physical length, and AlphaSimR generates the two gametes and phased offspring.
 
-Adjust transmission with `--v=4` for the interference shape, `--p=0` for the noninterfering fraction, `--map-scale=1` for multiplicative map scaling, and `--sdb-fraction=1` for the proportion of the dynamic SDB contribution transferred to the logit update. The last parameter accepts values in `[0,1]`.
-
 ### Save and resume
 
-Results are organized by Monte Carlo replicate as `MC0000/`, `MC0001/`, and so on. `--start=0` sets the first replicate index; the seed and replicate index determine the random-number sequence.
-
-- `--save-phased=true` saves phased haplotypes for each generation. A population checkpoint is retained when this option is false.
-- `--save-states=true` additionally saves the 0/1/2 ancestry-state matrix as unsigned bytes in R column-major order, with N rows and marker columns ordered as in `grid.tsv.gz`. The default is false.
-- `--resume=true` restores checkpoints and verifies completed replicates before skipping them. The bundle, code, population settings, R version, and AlphaSimR version must match the saved contract.
-- `--stop-after=2` stops after writing the F2 checkpoint. Resume with `--stop-after=0`, retaining the original target `--generations` and contract parameters.
-- `--save=false` runs in memory and prints results. Model-fitting stages use temporary files that are cleaned up at exit. For stages 05 and 05b, `--output` must still identify the existing selection results; stage 04b requires the existing CV work directory.
-
-AlphaSimR uses one thread per process. Separate processes can share an output root when their replicate ranges are disjoint, for example `--start=0 --replicates=25` and `--start=25 --replicates=25`. Use at most four concurrent processes as the runtime specification recommends.
+Results are grouped by Monte Carlo replicate (`MC0000/`, `MC0001/`, and so on). `--save-phased=true` saves the phased haplotypes; `--save-states=true` also saves diploid ancestry dosages. `--resume=true` resumes saved checkpoints with matching model and run settings. Each AlphaSimR process uses one thread; concurrent runs must use disjoint replicate ranges.
 
 ## 6. Summarize and interpret predictions
 
@@ -172,7 +142,7 @@ AlphaSimR uses one thread per process. Separate processes can share an output ro
 Rscript scripts/08_summarize_predictions.R --input=run/populations --observed=data/response.tsv.gz --output=run/summary
 ```
 
-`--observed` is optional and accepts the response schema in section 2. The summary uses completed replicates with matching run contracts and verified output hashes.
+`--observed` is optional and accepts the response schema in section 2. The summary reads completed simulation replicates.
 
 Each replicate contains `grid.tsv.gz`, a checkpoint, a completion record, and the following generation files:
 
@@ -186,25 +156,35 @@ Each replicate contains `grid.tsv.gz`, a checkpoint, a completion record, and th
 
 For simulated outputs, an AST-positive window contains at least one change between adjacent diploid ancestry states on a chromosome. Each change is assigned to the window containing its right-hand marker. Chromosome boundaries are handled separately. The `ancestry_transitions` column counts these adjacent-state changes, and heterozygosity is the fraction of markers with state 1.
 
-Stage 08 writes `window_probability_summary.tsv.gz`, `chromosome_count_summary.tsv`, and `replicate_generation_summary.tsv`. Window and chromosome summaries report the replicate count, mean, median, and `MC95_low`/`MC95_high`, the 2.5th and 97.5th percentiles across replicates. These intervals are `NA` for a single replicate. With observed responses, the tables also include `observed_F2` and `delta_from_observed_F2` (simulated mean minus observed F2) for each generation. The replicate-generation table retains each replicate's means for heterozygosity, TS allele frequency, AST-positive windows, and ancestry transitions.
+Stage 08 writes window, chromosome and replicate-generation summaries. Across-replicate summaries include means and 2.5th/97.5th percentiles. With observed responses, window and chromosome tables also include observed values and simulated-minus-observed differences.
 
-## 7. Run the synthetic example
+## 7. Fit and evaluate an external cohort
 
-The distributed data exercise schemas and transmission with small, artificial inputs. Run the smoke test after preparing the runtime:
+The external entry point refits `M0+meiotic_ACR+TE7+SDB_SNP+HDB` to window-level endpoint ancestry transitions in a supplied cohort. It uses the same beta-binomial model, position background, feature transformations and chromosome random effects.
+
+Supply a feature TSV containing `window_id`, `chr`, `window_start`, `window_end`, `telomere_to_centromere`, `arm_size_class`, `in_PER`, `meiotic_ACR`, `HDB`, `comparable_defined`, `SNP_log_divergence` and the seven TE coverage columns listed in section 2. Windows are ordered, nonoverlapping, 500-kb intervals. `meiotic_ACR` may be `NA`; fitting and evaluation use windows with available ACR. Other predictors follow the finite-value and coverage definitions in section 2.
+
+The response TSV has `sample`, `window_id`, `chr` and `htr_positive`, with one row per sample–window pair. Use `1` for a confirmed transition, `0` for an observable negative and `255` for an unknown observation. Within each sample subset, the effective denominator is the number of states equal to 0 or 1. A window enters fitting or evaluation only when that denominator is strictly greater than half the subset size.
+
+```bash
+Rscript scripts/09_fit_external.R --features=data/external_features.tsv --response=data/external_response.tsv.gz --output=run/external
+```
+
+For independent individual validation, supply a TSV with one `sample` column listing the held-out individuals:
+
+```bash
+Rscript scripts/09_fit_external.R --features=data/external_features.tsv --response=data/external_response.tsv.gz --test-samples=data/test_samples.tsv --output=run/external_holdout
+```
+
+Training and test counts use their respective effective denominators. Spline knots, means and scales are estimated from eligible training windows. The SDB definition uses whole-chromosome parental predictor means, independently of observed responses. Predictions use fitted chromosome effects for chromosomes represented in training.
+
+Outputs comprise `external_model.rds`, `coefficients.tsv`, `scaling.tsv`, `spline.tsv`, `samples.tsv`, `fit_audit.tsv`, `predictions.tsv.gz` and `metrics.tsv`. Prediction and metric rows identify fitted and held-out samples separately. Metrics include window RMSE, prediction R² and effective-observation-weighted log loss, for all and nonPER windows. Each invocation writes to a fresh output directory and checks model convergence and the fitted Hessian.
+
+## 8. Synthetic examples
 
 ```bash
 Rscript tests/smoke.R
+Rscript tests/external.R
 ```
 
-The test parses the R sources and checks input schemas, feature transformations, F1 consistency, dynamic cell updates, probability-to-map bounds, F2–F4 transmission, checkpoint restoration, output hashes, parameter-contract checks, and `--save=false`. Successful completion prints `SMOKE_PASS`. To retain its outputs, use a fresh directory with `--keep=true --output=example/smoke`.
-
-The individual interfaces can also be exercised directly:
-
-```bash
-Rscript scripts/00_prepare_features.R --background=tests/data/features.tsv --cells=tests/data/cells.tsv --output=example/features.tsv
-Rscript scripts/01_prepare_inputs.R --features=example/features.tsv --response=tests/data/response.tsv --output=example/prepared
-Rscript scripts/03_select_components.R --input=example/prepared --dry-run=true
-Rscript scripts/06_prepare_transport.R --features=tests/data/features.tsv --predictions=tests/data/predictions.tsv --effects=tests/data/effects.tsv --scaling=tests/data/scaling.tsv --random=tests/data/random.tsv --cells=tests/data/cells.tsv --contract=tests/data/contract.tsv --output=example/transport.rds
-Rscript scripts/07_predict_F2_Fn.R --bundle=example/transport.rds --output=example/populations --n=30 --replicates=2 --generations=3
-Rscript scripts/08_summarize_predictions.R --input=example/populations --observed=tests/data/response.tsv --output=example/summary
-```
+These scripts use small artificial inputs for the model interfaces, transmission and external-cohort fitting.

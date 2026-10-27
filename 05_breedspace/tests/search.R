@@ -1,49 +1,62 @@
 bs_test_search <- function() {
-  grid <- data.frame(chr = c(1, 1, 1, 2), physical_bp = c(1, 2, 4, 1),
-                     cell_bp_weight = c(1, 2, 1, 2), window_id = paste0("w", 1:4))
-  sc <- bs_parent_ratio_scoring(list(grid = grid, beta = cbind(FW = c(.8, -.2, .1, -.3), SSC = c(-.1, .2, .7, -.2)),
-             intercept = c(FW = 2, SSC = 3)))
+  grid <- data.frame(chr=c(1,1,1,2), physical_bp=c(1,2,4,1),
+    cell_bp_weight=c(1,2,1,2), window_id=paste0('w',1:4))
+  sc <- bs_parent_ratio_scoring(list(grid=grid,
+    beta=cbind(FW=c(.8,-.2,.1,-.3), SSC=c(-.1,.2,.7,-.2))))
   z <- bs_search_problem(sc)
-  g <- as.matrix(expand.grid(rep(list(c(0L, 2L)), 4)))
-  refs <- g[c(2, 9), , drop = FALSE]
-  for (level in c(0, .5, 1)) for (lo in 0:2) for (hi in lo:2) for (distance in c(0, .25)) {
-    model <- bs_search_model(z, level, lo, hi, refs, distance)
-    for (i in seq_len(nrow(g))) {
-      x <- g[i, ] / 2
-      for (y in list(c(0, 0), c(0, 1), c(1, 0), c(1, 1))) {
-        value <- drop(model$A %*% c(x, y))
-        actual <- all(value >= model$lhs - 1e-8 & value <= model$rhs + 1e-8)
-        v <- bs_search_score(g[i, ], sc)
-        expected <- identical(as.numeric(y), as.numeric(x[z$e] != x[z$e - 1L])) &&
-          v$attainment >= level - 1e-8 && v$K >= lo && v$K <= hi &&
-          all(bs_search_distance(refs, g[i, ], z$weight) >= distance - 1e-8)
-        stopifnot(actual == expected)
+  g <- as.matrix(expand.grid(rep(list(c(0L,2L)),4)))
+  refs <- g[c(2,9),,drop=FALSE]
+  ratio <- sweep((1-g)%*%sc$beta,2,abs(colSums(sc$beta)),'/')
+  for(goal in c('Joint','FW','SSC')) for(bounds in list(c(0,1),c(1,2),c(1.5,2),c(1,Inf))) {
+    for(lo in 0:2) for(distance in c(0,.5)) {
+      model <- bs_search_model(z,bounds[1],bounds[2],lo,2,refs,distance,goal)
+      for(i in seq_len(nrow(g))) for(y1 in 0:1) for(y2 in 0:1) {
+        x <- g[i,]/2; y <- c(y1,y2)
+        selectors <- if(goal=='Joint' && is.finite(bounds[2])) 0:1 else NA_integer_
+        actual <- any(vapply(selectors,function(selector) {
+          variables <- c(x,y,if(!is.na(selector)) selector)
+          value <- drop(model$A%*%variables)
+          all(value>=model$lhs-1e-8 & value<=model$rhs+1e-8)
+        },TRUE))
+        target <- if(goal=='Joint') min(ratio[i,]) else ratio[i,goal]
+        changed_bp <- drop((refs!=matrix(g[i,],nrow(refs),ncol(refs),byrow=TRUE))%*%grid$cell_bp_weight)
+        expected <- identical(as.numeric(y),as.numeric(x[z$e]!=x[z$e-1L])) &&
+          sum(y)>=lo && target>=bounds[1]-1e-10 && target<bounds[2]-1e-8 &&
+          all(changed_bp>floor(distance*sum(grid$cell_bp_weight)))
+        if(actual!=expected) stop(paste('MILP mismatch:',goal,paste(bounds,collapse=':'),
+          'lo',lo,'distance',distance,'GT',paste(g[i,],collapse=','),'XOR',paste(y,collapse=','),
+          'ratio',target,'actual',actual,'expected',expected))
       }
     }
   }
-  if (requireNamespace("highs", quietly = TRUE)) {
-    level <- .5
-    feasible <- apply(g, 1, function(x) bs_search_score(x, sc)$attainment >= level)
-    exact <- min(bs_switches(g[feasible, , drop = FALSE], grid))
-    s <- bs_search_solve(z, level, 0, z$n, matrix(integer(), 0, 4), 0, 10, 1L)
-    stopifnot(!is.null(s$state), s$lower == exact,
-              bs_switches(matrix(s$state, nrow = 1), grid) == exact)
-    result <- bs_search_library(sc, level, matrix(c(0, 2), 1), 3L, c(.25, .01),
-                                10, 3L, 2L, 1L)
-    frozen <- bs_freeze_minimum(result$collection, sc, result$certificates, 0L)
-    stopifnot(all(frozen$samples$K == exact))
-    bounded <- bs_search_library(sc, level, matrix(c(1, 2), 1), 3L, c(.25, .01),
-                                 10, 3L, 2L, 1L)
-    bounded_frozen <- bs_freeze_minimum(bounded$collection, sc, bounded$certificates, 1L)
-    exact_bounded <- min(bs_switches(g[feasible, , drop = FALSE], grid)[
-      bs_switches(g[feasible, , drop = FALSE], grid)>=1])
-    stopifnot(all(bounded$certificates$minimum_switches==1),
-      all(bounded_frozen$samples$K==exact_bounded),
-      inherits(try(bs_freeze_minimum(result$collection,sc,result$certificates,1L),silent=TRUE),'try-error'))
-    unsigned <- result$certificates; unsigned$model_sha256 <- NULL
-    stopifnot(inherits(try(bs_freeze_minimum(result$collection,sc,unsigned,0L),silent=TRUE),'try-error'))
-    changed <- sc; changed$intercept <- sc$intercept + 1
-    stopifnot(inherits(try(bs_freeze_minimum(result$collection,changed,result$certificates,0L),silent=TRUE),"try-error"))
+  stopifnot(!bs_distance_pass(.5,.5,6), bs_distance_pass(4/6,.5,6))
+  if(requireNamespace('highs',quietly=TRUE)) {
+    for(goal in c('Joint','FW','SSC')) {
+      target <- if(goal=='Joint') apply(ratio,1,min) else ratio[,goal]
+      feasible <- target>=-1e-10 & target<1-1e-8
+      exact <- min(bs_switches(g[feasible,,drop=FALSE],grid))
+      fit <- bs_search_solve(z,0,1,0,z$n,matrix(integer(),0,4),0,10,1L,goal)
+      stopifnot(!is.null(fit$state),fit$lower==exact,
+        bs_switches(matrix(fit$state,nrow=1),grid)==exact)
+    }
+    pool <- bs_from_state(g,grid,data.frame(id=paste0('p',seq_len(nrow(g)))))
+    checkpoint <- tempfile(fileext='.rds'); on.exit(unlink(checkpoint),add=TRUE)
+    args <- list(sc=sc,bins=matrix(c(0,1),1),switch_bins=matrix(c(0,0,1,2),2,byrow=TRUE),
+      quota=3L,seconds=5,goal='Joint',pool=pool,checkpoint=checkpoint)
+    result <- do.call(bs_search_library,args)
+    again <- do.call(bs_search_library,c(args,list(resume=TRUE)))
+    stopifnot(!is.null(result$collection),nrow(result$collection$samples)<=3L,
+      identical(result$collection,again$collection))
+    m <- result$collection$samples
+    stopifnot(all(bs_in_bin(m$classification_ratio,m$bin_lower,m$bin_upper)))
+    states <- bs_dense(result$collection)
+    if(nrow(states)>1L) for(i in 2:nrow(states)) {
+      changed_bp <- drop((states[seq_len(i-1L),,drop=FALSE]!=
+        matrix(states[i,],i-1L,ncol(states),byrow=TRUE))%*%grid$cell_bp_weight)
+      stopifnot(all(changed_bp>floor(m$admission_distance[i]*sum(grid$cell_bp_weight))))
+    }
+    args$bins <- matrix(c(0,2),1)
+    stopifnot(inherits(try(do.call(bs_search_library,c(args,list(resume=TRUE))),silent=TRUE),'try-error'))
   }
   invisible(TRUE)
 }

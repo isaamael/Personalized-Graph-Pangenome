@@ -40,7 +40,7 @@ ast_write <- function(x,path) {
 }
 
 ast_workspace <- function(o) {
-  if (!o$save) return(tempfile('ast_review_'))
+  if (!o$save) return(tempfile('ast_run_'))
   ast_required(o,'output')
   o$output
 }
@@ -98,7 +98,7 @@ ast_model_main <- function(stage,package) {
   if(o[['dry-run']]) {
     for(f in c('io.R','model_core.R','resampling.R','selection.R')) source(file.path(engine,'lib',f),local=FALSE)
     data <- htr_load_model_data(cfg)
-    htr_prepare_features(cfg,data$features,data$features$window_id,'review')
+    htr_prepare_features(cfg,data$features,data$features$window_id,'input_check')
     stopifnot(nrow(data$samples)>=max(o[['inner-folds']],o[['outer-folds']]))
     for(file in list.files(engine,pattern='\\.R$',full.names=TRUE,recursive=TRUE)) parse(file)
     cat(sprintf('DRY_RUN_OK stage=%s individuals=%d windows=%d inner=%d outer=%d repeats=%d CI=%.2f\n',

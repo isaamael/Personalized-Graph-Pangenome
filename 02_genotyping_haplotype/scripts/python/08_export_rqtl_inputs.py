@@ -13,7 +13,7 @@ import shutil
 import subprocess
 import sys
 from collections import Counter, defaultdict
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 GT2ST = {0: "mat", 1: "het", 2: "pat"}
 ST_CODE = {"NA": 0, "mat": 1, "het": 2, "pat": 3}
@@ -198,7 +198,7 @@ def load_seqlengths(fai: str) -> List[Tuple[str, int]]:
 def paint_sample(
     segs: List[dict], by_chr_pos: Dict[str, List[int]], n_markers: int, chrom_order: List[str]
 ) -> bytearray:
-    """Paint GS markers; CO gaps split at midpoint (RTIGER-consistent, no false NA)."""
+    """Paint marker states with midpoint boundaries and terminal extension."""
     out = bytearray(n_markers)
     offset = 0
     chrom_off: Dict[str, int] = {}
@@ -271,24 +271,6 @@ def write_state_matrix(
     return n_markers, n_na, n_mat, n_het, n_pat
 
 
-def promote_legacy_thin_to_dense(gs_dir: str) -> Optional[str]:
-    """If legacy full-matrix viterbi_thin exists and dense missing, rename → dense."""
-    thin = os.path.join(gs_dir, "viterbi_thin.tsv")
-    dense = os.path.join(gs_dir, "viterbi_dense.tsv")
-    if not os.path.isfile(thin) or os.path.getsize(thin) == 0:
-        return None
-    if os.path.isfile(dense) and os.path.getsize(dense) > 0:
-        return dense
-    with open(thin) as f:
-        ncols = len(f.readline().rstrip("\n").split("\t")) - 1
-    # full parentStable ~5e5; 50kb thin ~1e4
-    if ncols < 100000:
-        return None
-    os.rename(thin, dense)
-    print(f"[INFO] renamed legacy thin → dense (n_markers≈{ncols})", flush=True)
-    return dense
-
-
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--eval-dir", required=True)
@@ -315,11 +297,9 @@ def main() -> int:
     ap.add_argument(
         "--reuse-dense",
         action="store_true",
-        help="do not regenerate dense; rename legacy thin if needed",
+        help="reuse an existing dense matrix",
     )
     args = ap.parse_args()
-    if not args.write_dense:
-        args.reuse_dense = True  # default: keep existing dense / rename
 
     eval_dir = os.path.abspath(args.eval_dir)
     out_dir = os.path.abspath(args.out_dir or os.path.join(eval_dir, "export_gs_rqtl"))
@@ -404,9 +384,6 @@ def main() -> int:
     n_dense_markers = 0
 
     if not args.skip_thin:
-        if args.reuse_dense:
-            promote_legacy_thin_to_dense(gs_dir)
-
         print("[INFO] select GS thin markers (meanKC + bin center)…", flush=True)
         labels, by_chr_pos, site_rows = select_gs_markers(
             args.bcftools, vcf, args.gs_bin_bp
@@ -506,33 +483,18 @@ def main() -> int:
 
     readme = os.path.join(out_dir, "README.md")
     with open(readme, "w") as fo:
-        fo.write("# PanGenie Canon → GS / Rqtl export\n\n")
-        fo.write("- Source: Canon `viterbi_segments_minspan` + parentStable ancestry VCF\n")
-        fo.write("- Coord: MM `chr1`…`chr12` (same habit as GFA)\n")
-        fo.write("- States: mat/het/pat (= Hom-MM / Het / Hom-TS)\n")
+        fo.write("# Ancestry exports for GS and R/qtl\n\n")
+        fo.write("- Inputs: ancestry segments, transitions, parental-marker VCF and chromosome lengths.\n")
+        fo.write("- Coordinates: MM chromosomes; states mat/het/pat represent Hom-MM/Het/Hom-TS.\n")
         fo.write(
-            f"- `for_gs/viterbi_thin.tsv`: minspan painted on "
-            f"**{args.gs_bin_bp} bp** bin thin (max meanKC → nearest center)\n"
+            f"- `for_gs/viterbi_thin.tsv`: ancestry at one marker per {args.gs_bin_bp}-bp bin "
+            "(0 retains all markers), selected by mean KC and distance to the bin centre.\n"
         )
-        fo.write(
-            "- GS paint: in-segment closed; inter-segment gap at midpoint "
-            "`(end_i+start_{i+1})//2` (≤mid→left); terminal extend first/last "
-            "(RTIGER-consistent; no false NA in CO gaps)\n"
-        )
-        fo.write("- `for_gs/viterbi_dense.tsv`: **full** parentStable paint (optional/heavy)\n")
-        fo.write(
-            "- `for_gs/parent_stable_sites_50kb.tsv` (+ `gs_thin_sites.tsv`): "
-            "**GS-only** parentStable subset; also `shared/parent_stable_sites_gs50kb.tsv`\n"
-        )
-        fo.write(
-            "- Do **not** mix with Canon full set "
-            "`shared/parent_stable_sites.tsv` / `merge.ancestry_parentStable.vcf.gz`\n"
-        )
-        fo.write(
-            "- GS select uses FORMAT/KC only (mean); **not** offspring GT / missingness\n"
-        )
-        fo.write("- `for_rqtl/`: RTIGER step06 column schema (unchanged by GS thin)\n")
-        fo.write("- Local only; see EXPORT_META.tsv\n")
+        fo.write("- Inter-segment gaps use the flanking midpoint; terminal intervals use the nearest segment.\n")
+        fo.write("- `for_gs/gs_thin_sites.tsv` and `parent_stable_sites_50kb.tsv`: selected marker coordinates.\n")
+        fo.write("- `for_gs/viterbi_dense.tsv`: ancestry at all parental markers, when requested.\n")
+        fo.write("- `for_rqtl/`: segment, transition and sample-mapping tables.\n")
+        fo.write("- `EXPORT_META.tsv`: input references and export counts.\n")
 
     if args.pgg_dest:
         dest = os.path.abspath(args.pgg_dest)

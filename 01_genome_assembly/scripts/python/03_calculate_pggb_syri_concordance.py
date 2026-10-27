@@ -9,7 +9,6 @@ Midsize indel  20–49 bp          same type, |dPOS|≤10, len_sim≥0.7
 Large INS/DEL  ≥50 bp            same type, |dPOS|≤200, len_sim≥0.7
 Complex        MNP/INV/DUP/…     excluded from P/R/F1
 
-seq_sim not enforced (allele representation / left-norm mismatch).
 """
 from __future__ import annotations
 
@@ -26,7 +25,6 @@ CHRS = [f"chr{i}" for i in range(1, 13)]
 CLASSES = ["SNP", "Small", "Midsize", "Large"]
 POS_TOL = {"SNP": 0, "Small": 3, "Midsize": 10, "Large": 200}
 LEN_SIM_MIN = {"Small": 0.7, "Midsize": 0.7, "Large": 0.7}
-SEQ_SIM_MIN = {"Small": 0.7, "Midsize": 0.7, "Large": 0.7}
 
 
 def open_vcf(path: Path):
@@ -40,48 +38,6 @@ def parse_info(info: str) -> dict:
             k, v = x.split("=", 1)
             d[k] = v
     return d
-
-
-def indel_allele_seq(ref: str, alt: str, typ: str) -> str | None:
-    """Inserted or deleted sequence for seq_sim; None if unusable."""
-    if not ref or not alt or alt.startswith("<"):
-        return None
-    if any(c not in "ACGTNacgtn" for c in ref + alt):
-        return None
-    ref, alt = ref.upper(), alt.upper()
-    if typ == "INS":
-        # left-anchored: REF shorter
-        if len(alt) <= len(ref):
-            return None
-        # common: REF = anchor, ALT = anchor+ins
-        if alt.startswith(ref):
-            return alt[len(ref):]
-        if ref.startswith(alt):
-            return None
-        return alt  # fallback raw
-    if typ == "DEL":
-        if len(ref) <= len(alt):
-            return None
-        if ref.startswith(alt):
-            return ref[len(alt):]
-        return ref
-    return None
-
-
-def seq_sim(a: str | None, b: str | None) -> float | None:
-    """None = cannot evaluate (skip seq filter)."""
-    if a is None or b is None or a == "" or b == "":
-        return None
-    if a == b:
-        return 1.0
-    # simple identity / max-len (no alignment needed for short; for long use overlap ratio)
-    la, lb = len(a), len(b)
-    if la == 0 or lb == 0:
-        return 0.0
-    # character identity on min prefix + length penalty via min/max already in len_sim
-    m = min(la, lb)
-    match = sum(1 for i in range(m) if a[i] == b[i])
-    return match / max(la, lb)
 
 
 def len_sim(a: int, b: int) -> float:
@@ -110,14 +66,14 @@ def classify_record(ref: str, alt: str, info: dict):
             cls = "Midsize"
         else:
             cls = "Large"
-        return cls, typ, svlen, None  # no usable seq
+        return cls, typ, svlen
 
     if any(c not in "ACGTNacgtn" for c in ref + alt):
         return None
     ref_u, alt_u = ref.upper(), alt.upper()
     lr, la = len(ref_u), len(alt_u)
     if lr == 1 and la == 1:
-        return "SNP", "SNP", 1, None
+        return "SNP", "SNP", 1
     if lr == la:
         return None  # MNP / complex
     sz = abs(lr - la)
@@ -128,8 +84,7 @@ def classify_record(ref: str, alt: str, info: dict):
         cls = "Midsize"
     else:
         cls = "Large"
-    seq = indel_allele_seq(ref_u, alt_u, typ)
-    return cls, typ, sz, seq
+    return cls, typ, sz
 
 
 def load_bed(bed: Path | None):
@@ -191,11 +146,11 @@ def load_variants(paths, mask, require_samechr_orig: bool):
                 if hit is None:
                     n_cx += 1
                     continue
-                cls, typ, sz, seq = hit
+                cls, typ, sz = hit
                 data[chrom][cls].append({
                     "pos": pos, "size": sz, "type": typ,
                     "ref": ref.upper(), "alt": alt.upper(),
-                    "seq": seq, "matched": False,
+                    "matched": False,
                 })
                 n_keep += 1
     for c in CHRS:
@@ -227,8 +182,7 @@ def pair_ok(p, s, cls: str) -> bool:
         return False
     if len_sim(p["size"], s["size"]) < LEN_SIM_MIN[cls]:
         return False
-    # Allele-seq similarity optional: SyRI remapped vs PGGB often differ in
-    # left-normalization / representation → do NOT require seq_sim (user OK).
+    # Match equivalent representations by type, position and length similarity.
     return True
 
 

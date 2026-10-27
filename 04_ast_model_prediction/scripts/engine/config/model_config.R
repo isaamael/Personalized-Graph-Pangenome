@@ -121,7 +121,7 @@ htr_model_config <- function(project_root, script_root) {
       inner_folds = 4L,
       bootstrap_replicates = 3000L,
       base_seed = 20260830L,
-      fold_seed_scheme = "legacy_weighted_utf8_v1_frozen_no_observed_collisions",
+      fold_seed_scheme = "weighted_utf8_v1",
       bootstrap_seed_scheme = "md5_31bit_v1"
     ),
     optimizer = list(

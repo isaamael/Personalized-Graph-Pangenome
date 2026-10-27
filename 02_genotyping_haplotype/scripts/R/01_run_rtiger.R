@@ -8,15 +8,15 @@
 #
 # Usage:
 #   Single R with subsampling:
-#     Rscript step02_run_rtiger.R NAME TAG R NSTATES EXP_DESIGN SEQLENGTHS RUN_OUT QC_OUT \
+#     Rscript 01_run_rtiger.R NAME TAG R NSTATES EXP_DESIGN SEQLENGTHS RUN_OUT QC_OUT \
 #       --scan-R FALSE --single-scan-n N --post-processing 1
 #
 #   R-grid scan:
-#     Rscript step02_run_rtiger.R NAME TAG 0 NSTATES EXP_DESIGN SEQLENGTHS RUN_OUT QC_OUT \
+#     Rscript 01_run_rtiger.R NAME TAG 0 NSTATES EXP_DESIGN SEQLENGTHS RUN_OUT QC_OUT \
 #       --scan-R TRUE --scan-n N --post-processing 1
 #
 #   Autotune (initial R + subsampling):
-#     Rscript step02_run_rtiger.R NAME TAG 20 NSTATES EXP_DESIGN SEQLENGTHS RUN_OUT QC_OUT \
+#     Rscript 01_run_rtiger.R NAME TAG 20 NSTATES EXP_DESIGN SEQLENGTHS RUN_OUT QC_OUT \
 #       --autotune TRUE --single-scan-n N --post-processing 1
 
 suppressPackageStartupMessages(library(RTIGER))
@@ -51,7 +51,7 @@ QC_OUT     <- positional[8]
 
 SCAN_R    <- as_flag(get_arg("--scan-R", "FALSE"))
 AUTOTUNE  <- as_flag(get_arg("--autotune", "FALSE"))
-post_proc <- as.logical(as.integer(get_arg("--post-processing", "1")))
+post_proc <- as_flag(get_arg("--post-processing", "1"))
 save_rst  <- as_flag(get_arg("--save-results", "FALSE"))
 FORCE_RERUN <- as_flag(get_arg("--force", "FALSE"))
 

@@ -1,0 +1,18 @@
+name: GenomicSelection
+format: dependency-and-runtime-specification
+language: R and Python
+tested_environment:
+  R: '4.3.1'
+  Python: '3.12'
+  packages:
+    rrBLUP: '4.6.3'
+    BGLR: '1.1.2'
+runtime:
+  command_syntax: '--name=value'
+  genotype_encoding: 'MM=+1, heterozygous=0, TS=-1'
+  prediction_models: ['A-GBLUP', 'A+D', 'BayesC', 'RKHS']
+  bglr_iterations: 8000
+  bglr_burn_in: 2000
+  bglr_thinning: 5
+  additive_kernel_minimum_MAF: 0.05
+  test: 'Rscript tests/smoke.R; python scripts/01_prepare_genotypes.py --help'

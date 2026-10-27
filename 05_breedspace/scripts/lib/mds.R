@@ -174,7 +174,9 @@ bs_genotype_similarity <- function(gt, targets, chunk_size = 250L, threads = 1L,
   prefix <- c(0, cumsum(W / 2))
   n <- nrow(gt$samples)
   nt <- nrow(target_meta)
-  levels <- unique(target_meta$level)
+  if (!'goal' %in% names(target_meta)) target_meta$goal <- 'Joint'
+  if(anyNA(target_meta$goal) || any(!nzchar(target_meta$goal))) stop('Target goals must be named')
+  scopes <- unique(target_meta[c('goal','level')])
   out <- vector("list", ceiling(n / chunk_size))
   full <- if (save_distances) matrix(NA_real_, n, nt,
       dimnames = list(gt$samples$id, target_meta$id)) else NULL
@@ -187,14 +189,15 @@ bs_genotype_similarity <- function(gt, targets, chunk_size = 250L, threads = 1L,
     if (any(D < -tolerance | D > 1 + tolerance)) stop("Genotype distance outside [0,1]")
     H <- drop((bs_dense(gt, rows) == 1) %*% W)
     block <- block + 1L
-    out[[block]] <- do.call(rbind, lapply(levels, function(level) {
-      ix <- which(target_meta$level == level)
+    out[[block]] <- do.call(rbind, lapply(seq_len(nrow(scopes)), function(si) {
+      level <- scopes$level[si]; goal <- scopes$goal[si]
+      ix <- which(target_meta$level == level & target_meta$goal == goal)
       best <- ix[max.col(-D[, ix, drop = FALSE], ties.method = "first")]
       distance <- D[cbind(seq_along(rows), best)]
       if (any(distance + tolerance < H / 2)) stop("Invalid heterozygosity decomposition")
       fixed <- pmax(0, distance - H / 2)
       cbind(as.data.frame(gt$samples[rows, , drop = FALSE]),
-        data.frame(level = level, n_targets = length(ix), nearest_id = target_meta$id[best],
+        data.frame(goal = goal, level = level, n_targets = length(ix), nearest_id = target_meta$id[best],
           distance = distance, similarity = 1 - distance, heterozygosity = H,
           fixed_replacement_fraction = fixed,
           fixed_replacement_bp = fixed * sum(gt$grid$cell_bp_weight),
@@ -204,7 +207,7 @@ bs_genotype_similarity <- function(gt, targets, chunk_size = 250L, threads = 1L,
   }
   detail <- do.call(rbind, out)
   rownames(detail) <- NULL
-  groups <- c(group_columns, "level")
+  groups <- c(group_columns, "goal", "level")
   key <- do.call(interaction, c(lapply(detail[groups], as.character), list(drop = TRUE, lex.order = TRUE)))
   summary <- do.call(rbind, lapply(split(seq_len(nrow(detail)), key), function(ix) {
     z <- detail[ix, , drop = FALSE]

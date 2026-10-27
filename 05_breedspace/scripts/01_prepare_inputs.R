@@ -3,20 +3,19 @@ main <- function() {
   script <- normalizePath(sub('^--file=','',grep('^--file=',commandArgs(FALSE),value=TRUE)))
   package <- dirname(script)
   for(f in c('cli.R','data.R','metrics.R')) source(file.path(package,'lib',f))
-  o <- bs_options(list(grid='',effects='',baseline='',genotypes='',samples='',output='',save=TRUE,'r-library'=''))
+  o <- bs_options(list(grid='',effects='',genotypes='',samples='',output='',save=TRUE,'r-library'=''))
   if(is.null(o)) return(invisible(NULL))
   suppressPackageStartupMessages(library(Matrix))
   bs_required(o,'grid'); grid <- bs_read(o$grid); bs_validate_grid(grid)
-  if(!nzchar(o$effects) && !nzchar(o$genotypes)) stop('Supply effects and baseline, genotypes, or both')
+  if(!nzchar(o$effects) && !nzchar(o$genotypes)) stop('Supply effects, genotypes, or both')
   scoring <- genotypes <- NULL
   if(nzchar(o$effects)) {
-    bs_required(o,'baseline'); effects <- bs_read(o$effects); base <- bs_read(o$baseline)
-    if(!all(c('trait','intercept') %in% names(base)) || nrow(base)!=2) stop('Baseline requires two trait rows with trait and intercept')
+    effects <- bs_read(o$effects)
+    traits <- setdiff(names(effects), 'window_id')
+    if(length(traits)!=2L) stop('Effects require window_id and two named trait columns')
     if(!identical(as.character(effects$window_id),as.character(grid$window_id))) stop('Effect rows must follow the grid')
-    if(!all(base$trait %in% names(effects))) stop('Missing effect columns')
-    scoring <- bs_parent_ratio_scoring(list(grid=grid,beta=as.matrix(effects[,base$trait,drop=FALSE]),
-      intercept=setNames(base$intercept,base$trait)))
-  } else if(nzchar(o$baseline)) stop('baseline requires effects')
+    scoring <- bs_parent_ratio_scoring(list(grid=grid,beta=as.matrix(effects[,traits,drop=FALSE])))
+  }
   if(nzchar(o$genotypes)) {
     d <- bs_read(o$genotypes)
     if(!identical(names(d),c('id',as.character(grid$window_id)))) stop('Genotype TSV columns must be id followed by grid window IDs')

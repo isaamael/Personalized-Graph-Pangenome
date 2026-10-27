@@ -1,8 +1,9 @@
 #!/usr/bin/env Rscript
 test_mds <- function(package) {
   suppressPackageStartupMessages({library(Matrix); library(Rcpp)})
-  for (f in c("cli.R", "data.R", "mds.R")) source(file.path(package, "scripts", "lib", f))
-  bs_mds_engine(file.path(package, "scripts", "engine", "metric_mds.cpp"))
+  scripts <- if(dir.exists(file.path(package,"scripts"))) "scripts" else "submission"
+  for (f in c("cli.R", "data.R", "mds.R")) source(file.path(package, scripts, "lib", f))
+  bs_mds_engine(file.path(package, scripts, "engine", "metric_mds.cpp"))
   grid <- data.frame(chr = c(1, 1, 2, 2), physical_bp = c(1, 3, 1, 5),
     cell_bp_weight = c(2, 3, 4, 1), window_id = paste0("w", 1:4))
   G <- rbind(c(0, 0, 0, 0), c(2, 2, 2, 2), c(0, 2, 0, 2),
@@ -24,6 +25,12 @@ test_mds <- function(package) {
   het <- result$distances[result$distances$id == "g5", ]
   stopifnot(all(het$distance == .5), all(het$fixed_replacement_fraction == 0),
     all(het$compatible_with_fixed_ancestry), all(het$nearest_id == c("t1", "t3")))
+  mixed <- targets
+  mixed$samples$level <- .8
+  mixed$samples$goal <- c('Joint','Joint','FW','FW')
+  separated <- bs_genotype_similarity(gt,mixed,chunk_size=2L)
+  stopifnot(nrow(separated$summary)==2L,all(separated$summary$n_targets==2L),
+    setequal(separated$summary$goal,c('Joint','FW')))
   anchors <- data.frame(id = c("g1", "g2", "g3", "g4"),
     MDS1 = c(-.5, .5, -.1, .1), MDS2 = c(0, 0, .3, -.3))
   projected <- bs_mds(gt, reference_coordinates = anchors,

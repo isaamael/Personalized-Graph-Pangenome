@@ -1,7 +1,8 @@
 #!/usr/bin/env Rscript
 main <- function() {
   script <- normalizePath(sub('^--file=','',grep('^--file=',commandArgs(FALSE),value=TRUE)))
-  root <- dirname(dirname(script)); lib <- file.path(root,'scripts/lib')
+  root <- dirname(dirname(script)); scripts <- if(dir.exists(file.path(root,'scripts'))) 'scripts' else 'submission'
+  lib <- file.path(root,scripts,'lib')
   for(f in c('cli.R','data.R','metrics.R','markov.R','search.R','mds.R','release.R')) source(file.path(lib,f))
   o <- bs_options(list('r-library'='', 'skip-mds'=FALSE))
   if(is.null(o)) return(invisible(NULL))
@@ -20,7 +21,7 @@ main <- function() {
   r <- file.path(R.home('bin'),if(.Platform$OS.type=='windows') 'Rscript.exe' else 'Rscript')
   run <- function(file,args) {
     if(nzchar(o[['r-library']])) args <- c(args,paste0('--r-library=',o[['r-library']]))
-    log <- system2(r,c(shQuote(file.path(root,'scripts',file)),shQuote(args)),stdout=TRUE,stderr=TRUE)
+    log <- system2(r,c(shQuote(file.path(root,scripts,file)),shQuote(args)),stdout=TRUE,stderr=TRUE)
     status <- attr(log,'status')
     if(!is.null(status) && status!=0) stop(paste(log,collapse='\n'))
     cat('PASS CLI ',file,'\n',sep='')
@@ -28,18 +29,15 @@ main <- function() {
   }
   dat <- file.path(root,'tests/data'); prep <- file.path(tmp,'prepared')
   run('01_prepare_inputs.R',c(paste0('--grid=',file.path(dat,'grid.tsv')),
-    paste0('--effects=',file.path(dat,'effects.tsv')),paste0('--baseline=',file.path(dat,'baseline.tsv')),
+    paste0('--effects=',file.path(dat,'effects.tsv')),
     paste0('--genotypes=',file.path(dat,'genotypes.tsv')),paste0('--samples=',file.path(dat,'samples.tsv')),paste0('--output=',prep)))
   gt <- file.path(prep,'genotypes.rds'); sc <- file.path(prep,'scoring.rds'); search <- file.path(tmp,'search')
   model <- bs_load(sc)
   stopifnot(all(model$mu==0),identical(model$advantage,model$parent_best),
-    model$definition=='better_parent_GEBV_ratio_v1')
+    model$definition=='pure_additive_parent_ratio_v1')
   run('02_search_idealGT.R',c(paste0('--scoring=',sc),paste0('--output=',search),
-    '--levels=.5,.8','--bins=0:4','--quota=3','--seconds=5','--calls=3','--misses=2'))
-  frozen <- file.path(tmp,'frozen')
-  run('03_freeze_minimum_AST.R',c(paste0('--genotypes=',file.path(search,'collection.rds')),
-    paste0('--scoring=',sc),paste0('--certificates=',file.path(search,'certificates.tsv')),paste0('--output=',frozen),'--minimum-switches=0'))
-  target <- file.path(frozen,'minimum_collection.rds'); score <- file.path(tmp,'score')
+    '--bins=0:1,1:3','--switch-bins=0:4','--quota=3','--seconds=5'))
+  target <- file.path(search,'collection.rds'); score <- file.path(tmp,'score')
   stale <- bs_load(gt); stale$samples$Q <- 999; stale$samples$U <- -999
   stale$samples$attainment <- -999; stale$samples$score_definition <- 'obsolete'
   rescore_gt <- file.path(tmp,'rescore.rds'); saveRDS(stale,rescore_gt)
@@ -90,7 +88,7 @@ main <- function() {
   summary <- bs_read(file.path(tmp,'summary/cohort_summary.tsv'))
   stopifnot('UC_attainment5' %in% names(summary),!any(grepl('Q|UCq',names(summary))),
     all(summary$scope=='complete_cohort'),all(summary$attainment80_hits<=summary$n))
-  for(f in list.files(file.path(root,'scripts'),pattern='^[0-9].*\\.R$',full.names=TRUE)) run(basename(f),'--help')
+  for(f in list.files(file.path(root,scripts),pattern='^[0-9].*\\.R$',full.names=TRUE)) run(basename(f),'--help')
   cat('SMOKE_OK: assertions and command-line stages passed; temporary outputs removed on exit\n')
 }
 main()

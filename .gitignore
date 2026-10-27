@@ -36,3 +36,9 @@ __pycache__/
 .RData
 .DS_Store
 Thumbs.db
+
+# Local files
+tests/results/
+.claude/
+*.tar
+*.tar.gz
