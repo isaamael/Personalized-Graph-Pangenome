@@ -1,30 +1,8 @@
 #!/usr/bin/env Rscript
-# 读取一个拟合结果 RDS，导出以 RTIGER 结果为准的 RTIGER、R/qtl 和 GS 数据表。
-#
+# 导出拟合的 RTIGER 亲本来源状态，供基因型比较、R/qtl 和 GS 使用。
 # 样本名取自 fit@info$expDesign$OName。
-# --verify-expdesign 仅核对样本名，不改变映射关系。
-#
-# calcCOnumber() 仅与原始状态转换次数进行比对。
-# 不执行最小支持度过滤或短片段合并等后处理。
-#
-# 输出文件：
-#   A 作为结果依据的原始数据表：
-#     raw_transitions.tsv
-#     raw_viterbi_segments.tsv
-#     co_per_sample_from_rds.tsv
-#     viterbi_sample_map.tsv
-#   B GT_compare（原始结果）：
-#     for_gt_compare/all_transitions.tsv       # 位置定义：pos=first_marker_after
-#     for_gt_compare/transition_intervals.tsv  # 区间位置：left/right/midpoint
-#   C 列名适配后的 R/qtl 数据表：
-#     for_rqtl/viterbi_segments.tsv
-#     for_rqtl/all_transitions.tsv
-#   D 供 GS 使用的原始 Viterbi 矩阵：
-#     for_gs/viterbi_thin.tsv
-#     for_gs/viterbi_sample_map.tsv
-#   OUTPUTS.md / extract_meta.tsv
-#
-# 可选参数：--skip-viterbi-matrix
+# 状态转换表记录标记位置和两侧标记区间。
+# --skip-viterbi-matrix 仅导出片段和状态转换表。
 
 suppressPackageStartupMessages({
   library(GenomicRanges)
@@ -45,7 +23,7 @@ outdir <- parse_arg("--outdir")
 skip_matrix <- has_flag("--skip-viterbi-matrix")
 
 if (is.null(rds_path) || is.null(outdir)) {
-  stop("Usage: step06_extract_breakpoints.R --rds RDS --outdir DIR [--verify-expdesign TSV] [--skip-viterbi-matrix]")
+  stop("Usage: 02_export_rtiger_breakpoints.R --rds RDS --outdir DIR [--verify-expdesign TSV] [--skip-viterbi-matrix]")
 }
 if (!file.exists(rds_path)) stop("Missing RDS: ", rds_path)
 
@@ -376,33 +354,26 @@ write.table(meta, file.path(outdir, "extract_meta.tsv"),
 outs_md <- c(
   "# RTIGER ancestry outputs",
   "",
-  "## A. RTIGER authority (raw; official CO count)",
-  sprintf("- `raw_transitions.tsv` — %d rows; ≡ calcCOnumber", n_raw_trans),
-  sprintf("- `raw_viterbi_segments.tsv` — %d rows", n_raw_segs),
-  "- `co_per_sample_from_rds.tsv` — sample, co_total",
-  "- `viterbi_sample_map.tsv` — Sample_* → OName",
+  "## Ancestry tables",
+  sprintf("- `raw_transitions.tsv`: %d ancestry transitions with flanking markers and midpoints.", n_raw_trans),
+  sprintf("- `raw_viterbi_segments.tsv`: %d ancestry segments.", n_raw_segs),
+  "- `co_per_sample_from_rds.tsv`: per-sample transition counts from calcCOnumber.",
+  "- `viterbi_sample_map.tsv`: model sample names and sample IDs.",
   "",
-  "## B. GT_compare (raw transitions)",
-  "- `for_gt_compare/all_transitions.tsv` — pos=first_marker_after",
-  "- `for_gt_compare/transition_intervals.tsv` — left/right/midpoint",
+  "## Genotype comparison and R/qtl",
+  "- `for_gt_compare/all_transitions.tsv`: transition positions at the first marker after each change.",
+  "- `for_gt_compare/transition_intervals.tsv`: flanking markers and interval midpoints.",
+  "- `for_rqtl/`: ancestry segments and transition positions.",
   "",
-  "## C. R/qtl segment and transition tables",
-  "- `for_rqtl/viterbi_segments.tsv` — start/end (= raw segments)",
-  "- `for_rqtl/all_transitions.tsv` — same rows as GT pos table",
-  "",
-  "## D. GS (raw Viterbi matrix)",
+  "## Genomic selection",
   if (skip_matrix) {
-    "- `for_gs/viterbi_thin.tsv` — SKIPPED"
+    "- `for_gs/viterbi_thin.tsv`: omitted with --skip-viterbi-matrix."
   } else {
-    sprintf("- `for_gs/viterbi_thin.tsv` — %d x %d", length(thin_rows), n_markers_thin)
+    sprintf("- `for_gs/viterbi_thin.tsv`: ancestry states for %d samples at %d markers.", length(thin_rows), n_markers_thin)
   },
-  "- `for_gs/viterbi_sample_map.tsv`",
-  sprintf("- RDS: `%s`", normalizePath(rds_path)),
+  "- `for_gs/viterbi_sample_map.tsv`: model sample names and sample IDs.",
   "",
-  "## Rules",
-  "- One readRDS; sample map from fit@info$expDesign$OName only",
-  "- calcCOnumber ↔ raw_transitions only",
-  "- Ancestry states are taken from the fitted RTIGER object"
+  sprintf("Source model: `%s`", normalizePath(rds_path))
 )
 writeLines(outs_md, file.path(outdir, "OUTPUTS.md"))
 

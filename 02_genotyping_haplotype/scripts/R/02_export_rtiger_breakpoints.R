@@ -1,30 +1,8 @@
 #!/usr/bin/env Rscript
-# Read one fitted RDS and export authoritative RTIGER, R/qtl and GS tables.
-#
-# Sample names are taken from fit@info$expDesign$OName.
-# --verify-expdesign checks names only and does not change the mapping.
-#
-# calcCOnumber() is compared only with raw transitions.
-# No minimum-support or spike-merging post-processing is applied.
-#
-# Outputs:
-#   A authoritative tables:
-#     raw_transitions.tsv
-#     raw_viterbi_segments.tsv
-#     co_per_sample_from_rds.tsv
-#     viterbi_sample_map.tsv
-#   B GT_compare（raw）:
-#     for_gt_compare/all_transitions.tsv       # pos=first_marker_after
-#     for_gt_compare/transition_intervals.tsv  # left/right/midpoint
-#   C R/qtl tables with adapted column names:
-#     for_rqtl/viterbi_segments.tsv
-#     for_rqtl/all_transitions.tsv
-#   D raw Viterbi matrix for GS:
-#     for_gs/viterbi_thin.tsv
-#     for_gs/viterbi_sample_map.tsv
-#   OUTPUTS.md / extract_meta.tsv
-#
-# Optional: --skip-viterbi-matrix
+# Export fitted RTIGER ancestry states for genotype comparison, R/qtl and GS.
+# Sample names follow fit@info$expDesign$OName.
+# Transition tables record marker positions and flanking intervals.
+# --skip-viterbi-matrix exports segments and transitions only.
 
 suppressPackageStartupMessages({
   library(GenomicRanges)
@@ -45,7 +23,7 @@ outdir <- parse_arg("--outdir")
 skip_matrix <- has_flag("--skip-viterbi-matrix")
 
 if (is.null(rds_path) || is.null(outdir)) {
-  stop("Usage: step06_extract_breakpoints.R --rds RDS --outdir DIR [--verify-expdesign TSV] [--skip-viterbi-matrix]")
+  stop("Usage: 02_export_rtiger_breakpoints.R --rds RDS --outdir DIR [--verify-expdesign TSV] [--skip-viterbi-matrix]")
 }
 if (!file.exists(rds_path)) stop("Missing RDS: ", rds_path)
 
@@ -376,33 +354,26 @@ write.table(meta, file.path(outdir, "extract_meta.tsv"),
 outs_md <- c(
   "# RTIGER ancestry outputs",
   "",
-  "## A. RTIGER authority (raw; official CO count)",
-  sprintf("- `raw_transitions.tsv` — %d rows; ≡ calcCOnumber", n_raw_trans),
-  sprintf("- `raw_viterbi_segments.tsv` — %d rows", n_raw_segs),
-  "- `co_per_sample_from_rds.tsv` — sample, co_total",
-  "- `viterbi_sample_map.tsv` — Sample_* → OName",
+  "## Ancestry tables",
+  sprintf("- `raw_transitions.tsv`: %d ancestry transitions with flanking markers and midpoints.", n_raw_trans),
+  sprintf("- `raw_viterbi_segments.tsv`: %d ancestry segments.", n_raw_segs),
+  "- `co_per_sample_from_rds.tsv`: per-sample transition counts from calcCOnumber.",
+  "- `viterbi_sample_map.tsv`: model sample names and sample IDs.",
   "",
-  "## B. GT_compare (raw transitions)",
-  "- `for_gt_compare/all_transitions.tsv` — pos=first_marker_after",
-  "- `for_gt_compare/transition_intervals.tsv` — left/right/midpoint",
+  "## Genotype comparison and R/qtl",
+  "- `for_gt_compare/all_transitions.tsv`: transition positions at the first marker after each change.",
+  "- `for_gt_compare/transition_intervals.tsv`: flanking markers and interval midpoints.",
+  "- `for_rqtl/`: ancestry segments and transition positions.",
   "",
-  "## C. R/qtl segment and transition tables",
-  "- `for_rqtl/viterbi_segments.tsv` — start/end (= raw segments)",
-  "- `for_rqtl/all_transitions.tsv` — same rows as GT pos table",
-  "",
-  "## D. GS (raw Viterbi matrix)",
+  "## Genomic selection",
   if (skip_matrix) {
-    "- `for_gs/viterbi_thin.tsv` — SKIPPED"
+    "- `for_gs/viterbi_thin.tsv`: omitted with --skip-viterbi-matrix."
   } else {
-    sprintf("- `for_gs/viterbi_thin.tsv` — %d x %d", length(thin_rows), n_markers_thin)
+    sprintf("- `for_gs/viterbi_thin.tsv`: ancestry states for %d samples at %d markers.", length(thin_rows), n_markers_thin)
   },
-  "- `for_gs/viterbi_sample_map.tsv`",
-  sprintf("- RDS: `%s`", normalizePath(rds_path)),
+  "- `for_gs/viterbi_sample_map.tsv`: model sample names and sample IDs.",
   "",
-  "## Rules",
-  "- One readRDS; sample map from fit@info$expDesign$OName only",
-  "- calcCOnumber ↔ raw_transitions only",
-  "- Ancestry states are taken from the fitted RTIGER object"
+  sprintf("Source model: `%s`", normalizePath(rds_path))
 )
 writeLines(outs_md, file.path(outdir, "OUTPUTS.md"))
 

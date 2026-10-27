@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PGGB–SyRI 一致性分析——推荐的最终匹配规则。
+"""比较 PGGB 和 SyRI 的变异表示。
 
 类别           大小              匹配条件
 SNP            1 bp 单核苷酸变异  CHROM、POS、REF、ALT 完全一致（等位基因转为大写）

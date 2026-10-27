@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PGGB–SyRI concordance — recommended final matching rules.
+"""Compare PGGB and SyRI variant representations.
 
 Class          Size              Match
 SNP            1 bp SNV          exact CHROM,POS,REF,ALT (upper)

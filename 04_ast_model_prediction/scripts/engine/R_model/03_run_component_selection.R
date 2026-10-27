@@ -30,9 +30,8 @@ if (mode == "run") {
     current <- htr_selection_fingerprint(config, script_path)$id
     if (length(existing) != 1L || !identical(existing, current)) {
       stop(
-        "Frozen final_selection_contract.tsv belongs to a different source fingerprint. ",
-        "Run the patched engine only in a fresh project/result namespace; do not overwrite ",
-        "an existing model release.",
+        "Existing selection results have a different configuration or code fingerprint. ",
+        "Use a new output directory.",
         call. = FALSE
       )
     }
@@ -73,7 +72,7 @@ if (any(file.exists(metadata_paths))) {
   if (!all(file.exists(metadata_paths)) ||
       !same_existing_table(registry, metadata_paths[["registry"]]) ||
       !same_existing_table(configuration, metadata_paths[["configuration"]])) {
-    stop("Refusing to replace or repair frozen model metadata in place; use a fresh result namespace")
+    stop("Existing model metadata are incomplete or differ from this configuration; use a new output directory")
   }
 } else {
   htr_write_tsv_atomic(registry, metadata_paths[["registry"]], gzip = FALSE)
@@ -82,9 +81,9 @@ if (any(file.exists(metadata_paths))) {
 }
 if (mode == "metadata") {
   message(if (metadata_created) {
-    "Wrote model registry and configuration only"
+    "Wrote model registry and configuration"
   } else {
-    "Verified frozen model registry and configuration; files left unchanged"
+    "Model registry and configuration match existing files"
   })
   return(invisible(NULL))
 }

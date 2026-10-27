@@ -16,7 +16,7 @@ Code accompanying a tomato personalized graph-pangenome study: genome assembly, 
 
 [SOFTWARE.md](SOFTWARE.md) lists the core software and versions. Modules 03–05 also provide `environment.yaml` files with their R dependencies.
 
-Follow each guide's input schemas and numbered entry points under `scripts/`. Run the shell workflows from their `scripts/` directory and the R workflows from their module directory. Input and output paths in the examples are relative to those directories. R entry points in modules 03–05 accept `--name=value` arguments and provide `--help`.
+Prepare the inputs listed in each guide. Run shell workflows from their `scripts/` directory and R workflows from their module directory. R entry points in modules 03–05 use `--name=value`; `--help` lists their options.
 
 Workflow 03 exports grid-level additive effects for workflow 05. Workflow 04 accepts prepared genomic features and AST responses and exports a model for ancestry simulation.
 
