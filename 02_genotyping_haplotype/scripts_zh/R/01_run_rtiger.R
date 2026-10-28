@@ -1,23 +1,10 @@
 #!/usr/bin/env Rscript
-# RTIGER 交换事件检测：支持单个 R、R 网格扫描和自动调参。
-#
-# 运行模式（互斥）：
-#   1) 单个 R：位置参数 R>0，--scan-R FALSE，--autotune FALSE
-#   2) R 网格扫描：位置参数 R=0，--scan-R TRUE
-#   3) 自动调参：位置参数 R=initial_R，--autotune TRUE，--scan-R FALSE
-#
-# 用法：
-#   单个 R，使用子抽样：
-#     Rscript 01_run_rtiger.R NAME TAG R NSTATES EXP_DESIGN SEQLENGTHS RUN_OUT QC_OUT \
-#       --scan-R FALSE --single-scan-n N --post-processing 1
-#
-#   R 网格扫描：
-#     Rscript 01_run_rtiger.R NAME TAG 0 NSTATES EXP_DESIGN SEQLENGTHS RUN_OUT QC_OUT \
-#       --scan-R TRUE --scan-n N --post-processing 1
-#
-#   自动调参（指定初始 R，并使用子抽样）：
-#     Rscript 01_run_rtiger.R NAME TAG 20 NSTATES EXP_DESIGN SEQLENGTHS RUN_OUT QC_OUT \
-#       --autotune TRUE --single-scan-n N --post-processing 1
+# RTIGER 祖源推断。
+# 用法：Rscript 01_run_rtiger.R NAME TAG R NSTATES EXP_DESIGN SEQLENGTHS RUN_OUT QC_OUT [选项]
+# 模式：固定 R>0；网格扫描设 R=0、--scan-R TRUE；自动调参设初始 R>0、--autotune TRUE。
+# --scan-R 与 --autotune 互斥。
+# 子抽样：固定 R/自动调参使用 --single-scan-n N；网格扫描使用 --scan-n N。
+# 后处理：--post-processing 1。
 
 suppressPackageStartupMessages(library(RTIGER))
 tryCatch(

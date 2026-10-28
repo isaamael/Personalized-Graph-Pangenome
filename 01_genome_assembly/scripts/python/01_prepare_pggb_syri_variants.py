@@ -90,12 +90,9 @@ def syri_to_mm_vcfs(syri_vcf: Path, out_dir: Path, chr_lens: dict | None = None)
             if not alt.startswith("<") and all(x in "ACGTNacgtn" for x in ref + alt.replace(",", "")):
                 # allele swap to MM-ref
                 mm_ref, mm_alt = alt, ref
-                # For multi-base, SyRI INS (insertion in query) has longer ALT on TS-ref;
-                # after swap: longer REF on MM = DEL relative to MM when MM has the insertion...
-                # SyRI REF=TS: INS means insertion in QRY(MM) → MM has extra seq → on MM-ref this is
-                # not a simple allele swap for indels spanning different coordinates.
-                # For ShV SNPs (len1/len1) swap is exact. For indels use length on MM StartB
-                # and swapped alleles when both are sequence.
+                # Allele swapping exactly reorients SNPs. Indels use MM StartB and
+                # swapped sequence alleles; variants spanning different coordinate
+                # intervals require additional normalization.
                 sz = abs(len(mm_ref) - len(mm_alt))
                 rec = f"{qb}\t{mm_pos}\t{vid}\t{mm_ref}\t{mm_alt}\t.\tPASS\t{orig}\tGT\t{gt}\n"
                 if len(mm_ref) == 1 and len(mm_alt) == 1:
@@ -106,9 +103,8 @@ def syri_to_mm_vcfs(syri_vcf: Path, out_dir: Path, chr_lens: dict | None = None)
                     rows["sv"].append((qb, mm_pos, rec))
                 continue
 
-            # Symbolic INS/DEL on MM via ChrB; type flip TS-ref → MM-ref
-            # SyRI INS (ins in MM vs TS) ↔ DEL on MM-ref perspective is subtle;
-            # Keep symbolic ALT but place it on MM coordinates for fuzzy matching.
+            # Place symbolic INS/DEL on MM coordinates and reverse the type.
+            # Retain symbolic alleles for fuzzy matching.
             if alt in ("<INS>", "<DEL>"):
                 try:
                     end = int(eb) if eb not in (".", "-") else mm_pos

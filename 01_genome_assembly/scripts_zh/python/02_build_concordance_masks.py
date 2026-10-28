@@ -1,18 +1,10 @@
 #!/usr/bin/env python3
-"""PGGB–SyRI 分层一致性分析：A=全基因组（已有），B=一对一共线区域，C=B∩非重复区域。
+"""构建 PGGB-SyRI 掩码：A=全基因组，B=一对一共线区域，C=B 中的非重复区域。
 
-B 掩码（MM 坐标）：
-  纳入 SYN（查询序列）∪ SYNAL（查询序列）
-  排除 INV*/TRANS*/DUP*/HDR/NOTAL（查询序列）
-  排除染色体末端区域（END_MARGIN_BP）
-  排除提示坐标转换失败的变异：重新映射的 ShV 中 ORIG_TS 染色体与 MM 染色体不一致的记录
-
-C = 从 B 中扣除以下区域：
-  转座元件（TE，EDTA TEanno）
-  串联重复（SyRI TDM，以及 EDTA 的串联重复/简单重复注释，如有）
-  卫星重复 / 着丝粒（MM_centromeres_final.bed）
-  片段重复（MM 上的 SyRI DUP*/INVDP*）
-  组装缺口及两侧各 GAP_FLANK_BP 的区域
+B 使用 MM 查询序列的 SYN/SYNAL，排除 INV*/TRANS*/DUP*/HDR/NOTAL、
+染色体末端（END_MARGIN_BP）及 ORIG_TS 与 MM 染色体不一致的 ShV 记录。
+C 进一步扣除 EDTA 转座元件、串联重复（SyRI TDM 和 EDTA 串联/简单重复）、
+卫星重复/着丝粒、SyRI DUP*/INVDP* 片段重复，以及组装缺口和两侧各 GAP_FLANK_BP 区域。
 """
 from __future__ import annotations
 

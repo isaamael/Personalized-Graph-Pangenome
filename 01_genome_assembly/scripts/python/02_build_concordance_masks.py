@@ -1,18 +1,11 @@
 #!/usr/bin/env python3
-"""Stratified PGGB–SyRI concordance: A=genomewide (existing), B=1-1 collinear, C=B∩non-repetitive.
+"""Build PGGB-SyRI masks: A=genomewide, B=1-1 collinear, C=non-repetitive B.
 
-B mask (MM coords):
-  include SYN (query) ∪ SYNAL (query)
-  exclude INV*/TRANS*/DUP*/HDR/NOTAL (query)
-  exclude chromosome ends (END_MARGIN_BP)
-  exclude coord-failure proxy: remapped ShV with ORIG_TS chrom != MM chrom
-
-C = B minus:
-  TE (EDTA TEanno)
-  tandem (SyRI TDM + EDTA tandem/simple if present)
-  satellite / centromere (MM_centromeres_final.bed)
-  segmental duplication (SyRI DUP*/INVDP* on MM)
-  assembly gap ± GAP_FLANK_BP
+B uses MM query SYN/SYNAL, excluding INV*/TRANS*/DUP*/HDR/NOTAL,
+chromosome ends (END_MARGIN_BP), and ShV records with ORIG_TS/MM chromosome mismatches.
+C also removes EDTA TEanno, tandem repeats (SyRI TDM and EDTA tandem/simple),
+satellite/centromere intervals, SyRI DUP*/INVDP* segmental duplications,
+and assembly gaps with GAP_FLANK_BP flanks.
 """
 from __future__ import annotations
 

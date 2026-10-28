@@ -1,23 +1,10 @@
 #!/usr/bin/env Rscript
-# RTIGER single-R / R-grid / autotune crossover caller.
-#
-# Modes (mutually exclusive):
-#   1) Single R:  positional R>0, --scan-R FALSE, --autotune FALSE
-#   2) R-grid:    positional R=0, --scan-R TRUE
-#   3) Autotune:  positional R=initial_R, --autotune TRUE, --scan-R FALSE
-#
-# Usage:
-#   Single R with subsampling:
-#     Rscript 01_run_rtiger.R NAME TAG R NSTATES EXP_DESIGN SEQLENGTHS RUN_OUT QC_OUT \
-#       --scan-R FALSE --single-scan-n N --post-processing 1
-#
-#   R-grid scan:
-#     Rscript 01_run_rtiger.R NAME TAG 0 NSTATES EXP_DESIGN SEQLENGTHS RUN_OUT QC_OUT \
-#       --scan-R TRUE --scan-n N --post-processing 1
-#
-#   Autotune (initial R + subsampling):
-#     Rscript 01_run_rtiger.R NAME TAG 20 NSTATES EXP_DESIGN SEQLENGTHS RUN_OUT QC_OUT \
-#       --autotune TRUE --single-scan-n N --post-processing 1
+# RTIGER ancestry inference.
+# Usage: Rscript 01_run_rtiger.R NAME TAG R NSTATES EXP_DESIGN SEQLENGTHS RUN_OUT QC_OUT [options]
+# Modes: fixed R>0; grid R=0 with --scan-R TRUE; initial R>0 with --autotune TRUE.
+# --scan-R and --autotune are mutually exclusive.
+# Subsampling: --single-scan-n N for fixed R/autotune; --scan-n N for grid scans.
+# Post-processing: --post-processing 1.
 
 suppressPackageStartupMessages(library(RTIGER))
 tryCatch(

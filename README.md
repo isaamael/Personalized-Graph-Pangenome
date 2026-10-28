@@ -22,7 +22,9 @@ Workflow 03 exports grid-level additive effects for workflow 05. Workflow 04 acc
 
 ## Tests
 
-Small test cases are provided under each module's `tests/` directory. For example, from the repository root:
+Small test cases are provided under each module's `tests/` directory. These small datasets are intended only to check workflow execution; their outputs may not be biologically interpretable.
+
+For example, from the repository root:
 
 ```sh
 python 01_genome_assembly/tests/test_project_centromeres.py

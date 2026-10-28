@@ -90,12 +90,8 @@ def syri_to_mm_vcfs(syri_vcf: Path, out_dir: Path, chr_lens: dict | None = None)
             if not alt.startswith("<") and all(x in "ACGTNacgtn" for x in ref + alt.replace(",", "")):
                 # 交换等位基因，使 MM 成为参考
                 mm_ref, mm_alt = alt, ref
-                # 对于多碱基变异，SyRI INS（查询序列中的插入）在以 TS 为参考时具有较长的 ALT；
-                # 交换后，MM 中较长的 REF 表示相对于 MM 的缺失（DEL），因为插入序列位于 MM 中。
-                # 当 SyRI 的 REF=TS 时，INS 表示查询序列 MM 相对 TS 多出一段序列；
-                # 若插入缺失跨越不同坐标，仅交换等位基因并不能完成以 MM 为参考的转换。
-                # 对于两个等位基因均为单碱基的 ShV SNP，交换可准确完成转换。对于插入缺失，使用 MM 的 StartB 和变异长度，
-                # 并在两个等位基因均以序列表示时交换等位基因。
+                # 交换等位基因可准确重定向 SNP。插入缺失使用 MM 的 StartB 和交换后的序列型等位基因；
+                # 跨越不同坐标区间的变异还需要进一步规范化。
                 sz = abs(len(mm_ref) - len(mm_alt))
                 rec = f"{qb}\t{mm_pos}\t{vid}\t{mm_ref}\t{mm_alt}\t.\tPASS\t{orig}\tGT\t{gt}\n"
                 if len(mm_ref) == 1 and len(mm_alt) == 1:
@@ -106,9 +102,7 @@ def syri_to_mm_vcfs(syri_vcf: Path, out_dir: Path, chr_lens: dict | None = None)
                     rows["sv"].append((qb, mm_pos, rec))
                 continue
 
-            # 通过 ChrB 将符号型 INS/DEL 定位到 MM；由 TS 参考转换为 MM 参考时交换类型
-            # SyRI 的 INS（MM 相对 TS 的插入）与 MM 参考下的 DEL 之间的对应关系需注意参考方向；
-            # 保留 ALT 的符号表示，并将其定位到 MM 坐标，用于模糊匹配。
+            # 将符号型 INS/DEL 定位到 MM 坐标并交换类型，保留符号型等位基因用于模糊匹配。
             if alt in ("<INS>", "<DEL>"):
                 try:
                     end = int(eb) if eb not in (".", "-") else mm_pos
