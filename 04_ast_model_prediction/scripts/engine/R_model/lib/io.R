@@ -9,7 +9,7 @@ htr_require_columns <- function(frame, columns, label) {
 htr_ensure_directories <- function(config) {
   for (path in c(
     config$input_dir, config$work_dir, config$cache_dir,
-    config$model_result_dir, config$validation_result_dir
+    config$model_result_dir
   )) {
     dir.create(path, recursive = TRUE, showWarnings = FALSE)
   }

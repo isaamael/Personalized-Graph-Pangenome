@@ -1,7 +1,6 @@
 options(stringsAsFactors = FALSE)
 
 htr_model_config <- function(project_root, script_root) {
-  code_project_root <- project_root
   component <- function(
       id, label, terms, sources, transforms, requires = character(),
       random_terms = character(), likelihood_terms = terms) {
@@ -83,20 +82,16 @@ htr_model_config <- function(project_root, script_root) {
     te_profile = te_profile,
     release_id = basename(project_root),
     project_root = project_root,
-    code_project_root = code_project_root,
     script_root = script_root,
     input_dir = file.path(project_root, "input"),
     work_dir = file.path(project_root, "work"),
     cache_dir = file.path(project_root, "work", "fit_cache"),
     model_result_dir = file.path(project_root, "result", "R_model"),
-    validation_result_dir = file.path(project_root, "result", "python_validation"),
     prepared = list(
       features = file.path(project_root, "input", "pgg_features_500kb.tsv.gz"),
       response = file.path(project_root, "input", "htr_binary_500kb.tsv.gz"),
       samples = file.path(project_root, "input", "samples.tsv"),
-      registry = file.path(project_root, "input", "component_registry.tsv"),
-      manifest = file.path(project_root, "input", "input_manifest.tsv"),
-      validation = file.path(project_root, "input", "input_validation.tsv")
+      registry = file.path(project_root, "input", "component_registry.tsv")
     ),
     chromosome_levels = sprintf("chr%02d", 1:12),
     response_window_bp = 500000L,

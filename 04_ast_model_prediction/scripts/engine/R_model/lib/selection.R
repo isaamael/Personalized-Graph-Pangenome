@@ -105,7 +105,6 @@ htr_full_comparison <- function(
       !isTRUE(association$monotonicity_violated) &&
       !isTRUE(full_evidence$monotonicity_violated) &&
       !isTRUE(variance_evidence$monotonicity_violated),
-    q_value_role = "adaptive_round_screen_not_global_FDR",
     stringsAsFactors = FALSE
   )
   audits <- if (has_candidate_random) {
@@ -330,8 +329,6 @@ htr_evaluate_round <- function(
   inner_template$positive_chromosomes <- NA_integer_
   inner_template$selection_ci_level <- NA_real_
   inner_template$reported_ci_levels <- NA_character_
-  inner_template$uncertainty_role <- NA_character_
-  inner_template$repeat_role <- NA_character_
   inner_template$quantile_method <- NA_character_
   inner_template$oof_valid <- FALSE
   if (nrow(inner)) {

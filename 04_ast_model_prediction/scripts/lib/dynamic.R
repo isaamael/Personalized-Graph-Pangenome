@@ -27,7 +27,7 @@ dynamic_parent_features <- function(bundle, first, second) {
 transport_landscape <- function(bundle, dynamic, sdb_transport_fraction=1) {
   ref <- bundle$reference
   if (!is.data.frame(dynamic) || !identical(dynamic$window_id,ref$window_id))
-    stop("V1 requires dynamic_parent_features from two phased paths; scalar heterozygosity is insufficient")
+    stop("Dynamic features must match the reference window order")
   stopifnot(length(sdb_transport_fraction)==1L, is.finite(sdb_transport_fraction),
     sdb_transport_fraction>=0, sdb_transport_fraction<=1)
   centres <- unname(bundle$chr_centres[ref$chr])
@@ -44,8 +44,7 @@ transport_landscape <- function(bundle, dynamic, sdb_transport_fraction=1) {
     heterozygous_fraction=dynamic$heterozygous_fraction,dynamic_HDB=dynamic$HDB,
     dynamic_comparable_defined=dynamic$comparable_defined,dynamic_SNP_log_divergence=dynamic$SNP_log_divergence,
     predicted_htr_observed_scale=p,gamete_switch_probability=q,
-    latent_map_increment_M=gamete_probability_to_map_M(q),sdb_transport_fraction=sdb_transport_fraction,
-    transport_role="conditional_V1_dynamic_HDB_SDB_TE")
+    latent_map_increment_M=gamete_probability_to_map_M(q),sdb_transport_fraction=sdb_transport_fraction)
   for (f in te_families) out[[paste0("dynamic_TE_",f)]] <- dynamic[[f]]
   out
 }

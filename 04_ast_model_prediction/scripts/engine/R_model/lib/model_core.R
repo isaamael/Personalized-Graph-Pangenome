@@ -499,26 +499,7 @@ htr_effect_table <- function(model, scope, selected) {
     OR = exp(unname(coefficients)),
     OR_low = exp(unname(coefficients) - 1.96 * unname(standard_error)),
     OR_high = exp(unname(coefficients) + 1.96 * unname(standard_error)),
-    interval_role = "descriptive_post_selection_Wald_interval",
     stringsAsFactors = FALSE
-  )
-  table$effect_role <- ifelse(
-    grepl("^z_TE_", table$term),
-    "TE_context_member_descriptive_not_independent_term_evidence",
-    ifelse(
-      table$term %in% c("z_meiotic_ACR", "z_HDB", "z_SNP_within_chr"),
-      "selected_component_effect_descriptive",
-      ifelse(
-        table$term == "comparable_defined",
-        "comparable_region_definition_indicator",
-        "M0_background_term"
-      )
-    )
-  )
-  table$collinearity_role <- ifelse(
-    grepl("^z_TE_", table$term),
-    "interpret_selected_TE_context_jointly;term_coefficients_are_representation_sensitive",
-    "not_TE_context_member"
   )
   table
 }

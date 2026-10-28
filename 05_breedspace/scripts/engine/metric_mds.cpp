@@ -17,7 +17,7 @@ NumericVector pair_distances(S4 X,IntegerVector a,IntegerVector b,NumericVector 
  for(int k=0;k<a.size();k++)out[k]=gd(a[k]-1,b[k]-1,p,ii,xx,prefix);return out;
 }
 // Pairwise SGD minimizes unweighted raw metric stress; sampled edges approximate
-// the full all-observation objective. No route, generation, or GEBV enters fitting.
+// the full all-observation objective.
 // [[Rcpp::export]]
 NumericMatrix stress_sgd(NumericMatrix initial,IntegerVector a,IntegerVector b,NumericVector d,int epochs=100,double first=.5,double last=.0001){
  NumericMatrix z=clone(initial);int m=a.size();
@@ -26,7 +26,7 @@ NumericMatrix stress_sgd(NumericMatrix initial,IntegerVector a,IntegerVector b,N
   if(e%20==0)Rcpp::checkUserInterrupt();
  }return z;
 }
-// Each query independently minimizes squared distance error to ALL fixed F2s.
+// Each query independently minimizes squared distance error to fixed reference genotypes.
 // Three deterministic starts; gradient majorization with line search.
 // [[Rcpp::export]]
 List project_fixed(S4 X,IntegerVector queries,IntegerVector anchors,NumericMatrix az,NumericMatrix initial,NumericVector prefix,int threads=4){

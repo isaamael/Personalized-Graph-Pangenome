@@ -284,8 +284,6 @@ htr_summarize_oof_delta <- function(config, delta, context_id) {
     ) > 0),
     selection_ci_level = selection_level,
     reported_ci_levels = paste(report_levels, collapse = ";"),
-    uncertainty_role = "conditional_two_way_sample_chromosome_bootstrap_fixed_oof_predictions",
-    repeat_role = "resampling_stability_not_independent_experiments",
     quantile_method = "R_type8",
     stringsAsFactors = FALSE
   )
